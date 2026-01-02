@@ -100,10 +100,15 @@ export class TensorOps {
 
   /**
    * Concatenate tensors along an axis
+   * Note: Currently only axis 0 is fully implemented
    */
   static concat(tensors: Tensor[], axis: number = 0): Tensor {
     if (tensors.length === 0) {
       throw new Error('Need at least one tensor to concatenate');
+    }
+
+    if (axis !== 0) {
+      throw new Error(`Concatenation along axis ${axis} not yet implemented. Only axis 0 is supported.`);
     }
 
     // Validate shapes
@@ -129,14 +134,12 @@ export class TensorOps {
       dtype: 'float32',
     };
 
-    // Copy data (simplified for axis 0)
-    if (axis === 0) {
-      let offset = 0;
-      for (const tensor of tensors) {
-        const data = tensor.data as Float32Array;
-        (result.data as Float32Array).set(data, offset);
-        offset += data.length;
-      }
+    // Copy data (axis 0 implementation)
+    let offset = 0;
+    for (const tensor of tensors) {
+      const data = tensor.data as Float32Array;
+      (result.data as Float32Array).set(data, offset);
+      offset += data.length;
     }
 
     return result;

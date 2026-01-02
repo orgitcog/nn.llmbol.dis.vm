@@ -68,7 +68,8 @@ export class Linear implements NNModule {
     const size = inputSize * outputSize;
     const data = new Float32Array(size);
     
-    // Xavier initialization
+    // Xavier/Glorot initialization: helps maintain gradient variance across layers
+    // Formula: std = sqrt(2.0 / (fan_in + fan_out))
     const std = Math.sqrt(2.0 / (inputSize + outputSize));
     for (let i = 0; i < size; i++) {
       data[i] = (Math.random() - 0.5) * 2 * std;

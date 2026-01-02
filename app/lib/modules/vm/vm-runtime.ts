@@ -63,6 +63,11 @@ export class VMRuntime {
 
   /**
    * Interpret bytecode (simplified implementation)
+   * TODO: Implement full bytecode instruction set with:
+   * - Arithmetic operations (ADD, SUB, MUL, DIV)
+   * - Control flow (JMP, JZ, JNZ)
+   * - Memory operations (LOAD, STORE)
+   * - Function calls (CALL, RET)
    */
   private interpretBytecode(process: VMProcess, bytecode: Uint8Array): any {
     // This is a simplified interpreter

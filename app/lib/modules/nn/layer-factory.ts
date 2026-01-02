@@ -34,6 +34,8 @@ export class LayerFactory {
    * Create a layer based on type and configuration
    */
   static create(config: LayerConfig): NNModule {
+    const availableTypes = ['linear', 'relu', 'tanh', 'sigmoid', 'dropout', 'batchnorm', 'conv1d'];
+    
     switch (config.type) {
       case 'linear':
         return this.createLinear(config.params);
@@ -50,7 +52,9 @@ export class LayerFactory {
       case 'conv1d':
         return this.createConv1d(config.params);
       default:
-        throw new Error(`Unknown layer type: ${config.type}`);
+        throw new Error(
+          `Unknown layer type: ${config.type}. Available types: ${availableTypes.join(', ')}`
+        );
     }
   }
 

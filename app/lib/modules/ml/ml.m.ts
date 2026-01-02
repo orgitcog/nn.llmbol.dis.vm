@@ -9,6 +9,8 @@ export interface Tensor {
   shape: number[];
   data: Float32Array | Uint8Array | Int8Array;
   dtype: 'float32' | 'uint8' | 'int8' | 'int4';
+  // Note: 'int4' dtype uses Uint8Array storage with 2 values packed per byte
+  // Use Quantization.dequantize() to properly decode int4 tensors
 }
 
 export interface MLModel {

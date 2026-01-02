@@ -186,9 +186,9 @@ export class ModelBuilder {
   summary(): string {
     const lines: string[] = [];
     lines.push(`Model: ${this.architecture.name}`);
-    lines.push('=' .repeat(60));
+    lines.push('='.repeat(60));
     lines.push('Layer (type)'.padEnd(30) + 'Output Shape');
-    lines.push('=' .repeat(60));
+    lines.push('='.repeat(60));
     
     for (let i = 0; i < this.architecture.layers.length; i++) {
       const layer = this.architecture.layers[i];
@@ -196,12 +196,12 @@ export class ModelBuilder {
       lines.push(layerName.padEnd(30) + 'Dynamic');
     }
     
-    lines.push('=' .repeat(60));
+    lines.push('='.repeat(60));
     
     const params = this.parameters();
     const totalParams = params.reduce((sum, p) => sum + p.data.length, 0);
     lines.push(`Total parameters: ${totalParams.toLocaleString()}`);
-    lines.push('=' .repeat(60));
+    lines.push('='.repeat(60));
     
     return lines.join('\n');
   }

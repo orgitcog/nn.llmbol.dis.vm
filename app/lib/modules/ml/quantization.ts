@@ -120,6 +120,8 @@ export class Quantization {
       }
     }
 
+    // Note: int4 dtype uses Uint8Array storage (2 values per byte)
+    // Consumers should use dequantization functions to properly decode
     return {
       shape: tensor.shape,
       data: quantized,

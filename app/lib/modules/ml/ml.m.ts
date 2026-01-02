@@ -50,7 +50,8 @@ export class MLModule {
         data = new Int8Array(size);
         break;
       case 'int4':
-        // Store int4 in uint8 array (2 values per byte)
+        // Note: int4 values are packed 2 per byte in a Uint8Array
+        // This allows for 50% memory savings compared to storing as int8
         data = new Uint8Array(Math.ceil(size / 2));
         break;
       default:

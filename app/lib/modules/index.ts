@@ -120,6 +120,24 @@ export {
   type CommunicationConfig 
 } from './distributed/communication';
 
+// LLM Module Exports
+export { 
+  LLMManager 
+} from './llm/manager';
+
+export { 
+  BaseProvider,
+  getOpenAILikeModel
+} from './llm/base-provider';
+
+export { 
+  type ModelInfo,
+  type ProviderInfo,
+  type ProviderConfig 
+} from './llm/types';
+
+export * as LLMProviders from './llm/registry';
+
 /**
  * Version information
  */
@@ -136,5 +154,6 @@ export const SYSTEM_INFO = {
     ml: 'GGML-like ML module implementations',
     nn: 'Torch7-style neural network architecture',
     distributed: 'Distributed compute capabilities',
+    llm: 'Multi-provider LLM manager with dynamic model discovery',
   },
 };

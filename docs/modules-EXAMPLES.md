@@ -350,3 +350,94 @@ const testSchedulingStrategy = async (strategy: any) => {
 4. **Model Building**: Use `ModelBuilder` for complex architectures, `nn()` for quick prototypes
 5. **Testing**: Always test bytecode modules before deployment
 6. **Monitoring**: Regularly check stats from VM, scheduler, and communication modules
+7. **LLM Providers**: Call `LLMManager.getInstance()` once at application startup; it is a singleton and auto-registers all built-in providers
+8. **Dynamic Models**: Use `updateModelList()` when you need the freshest model list; use `getStaticModelList()` for offline / faster startup scenarios
+
+## Example 11: LLM Manager – Listing Providers and Models
+
+```typescript
+import { LLMManager } from '~/lib/modules';
+
+const manager = LLMManager.getInstance();
+
+// All registered providers
+const providers = manager.getAllProviders();
+console.log('Registered providers:', providers.map((p) => p.name).join(', '));
+
+// Quick access to static models (no network call)
+const staticModels = manager.getStaticModelList();
+console.log(`${staticModels.length} static models available`);
+```
+
+## Example 12: LLM Manager – Dynamic Model Discovery
+
+```typescript
+import { LLMManager } from '~/lib/modules';
+
+const manager = LLMManager.getInstance({ OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? '' });
+
+// Fetch static + dynamic models across all enabled providers
+const allModels = await manager.updateModelList({
+  apiKeys: { OpenAI: process.env.OPENAI_API_KEY ?? '' },
+  providerSettings: {
+    OpenAI: { enabled: true },
+    Anthropic: { enabled: false },
+  },
+});
+
+console.log('Models:', allModels.map((m) => `${m.provider}/${m.name}`).join('\n'));
+```
+
+## Example 13: Custom LLM Provider
+
+```typescript
+import { BaseProvider, LLMManager } from '~/lib/modules';
+import type { ModelInfo, ProviderConfig } from '~/lib/modules';
+import type { LanguageModelV1 } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+
+class MyCustomProvider extends BaseProvider {
+  name = 'MyCustom';
+  getApiKeyLink = 'https://my-provider.example.com/keys';
+
+  config: ProviderConfig = {
+    apiTokenKey: 'MY_CUSTOM_API_KEY',
+    baseUrl: 'https://api.my-provider.example.com/v1',
+  };
+
+  staticModels: ModelInfo[] = [
+    {
+      name: 'my-model-v1',
+      label: 'My Model v1',
+      provider: 'MyCustom',
+      maxTokenAllowed: 32000,
+      maxCompletionTokens: 4096,
+    },
+  ];
+
+  getModelInstance(options: {
+    model: string;
+    serverEnv?: Env;
+    apiKeys?: Record<string, string>;
+  }): LanguageModelV1 {
+    const { apiKey, baseUrl } = this.getProviderBaseUrlAndKey({
+      apiKeys: options.apiKeys,
+      serverEnv: options.serverEnv as any,
+      defaultBaseUrlKey: 'MY_CUSTOM_BASE_URL',
+      defaultApiTokenKey: 'MY_CUSTOM_API_KEY',
+    });
+
+    const openai = createOpenAI({ baseURL: baseUrl, apiKey });
+    return openai(options.model);
+  }
+}
+
+// Register the custom provider
+const manager = LLMManager.getInstance();
+manager.registerProvider(new MyCustomProvider());
+
+// Use it
+const provider = manager.getProvider('MyCustom')!;
+const instance = provider.getModelInstance({ model: 'my-model-v1', apiKeys: { MyCustom: 'sk-...' } });
+console.log('Custom provider model instance ready:', !!instance);
+```

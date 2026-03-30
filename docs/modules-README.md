@@ -5,6 +5,7 @@ A comprehensive system for deploying and executing neural network models with:
 - **GGML-like ML operations**: High-performance tensor operations with quantization support
 - **Torch7-style architectures**: Modular neural network builder with dynamic composition
 - **Distributed compute**: Task scheduling and inter-node communication
+- **Multi-provider LLM manager**: Unified interface for 19+ LLM providers with dynamic model discovery
 
 ## Architecture
 
@@ -37,6 +38,17 @@ Distributed computing capabilities:
 - Task scheduling with multiple strategies
 - Inter-node communication
 - Load balancing and fault tolerance
+
+### LLM Module
+Multi-provider large language model management:
+- Unified `LLMManager` singleton with auto-registration of all built-in providers
+- Extensible `BaseProvider` base class for custom provider implementations
+- Static model lists combined with dynamic model discovery per provider
+- Provider-scoped API-key and base-URL resolution (env vars, settings, runtime overrides)
+- Built-in caching layer for dynamic model lists to minimise redundant API calls
+- 19 bundled providers: Anthropic, OpenAI, Google, Groq, xAI, DeepSeek, Mistral, Cohere,
+  Together, Perplexity, HuggingFace, Ollama, LM Studio, OpenRouter, Moonshot, Hyperbolic,
+  GitHub Models, Amazon Bedrock, and OpenAI-compatible endpoints
 
 ## Quick Start
 
@@ -145,7 +157,41 @@ scheduler.submitTask(task);
 console.log(scheduler.getStats());
 ```
 
-## Module Structure
+### LLM Management
+
+```typescript
+import { LLMManager } from '~/lib/modules';
+
+// Get the global singleton (providers are auto-registered on first call)
+const manager = LLMManager.getInstance();
+
+// List all registered providers
+const providers = manager.getAllProviders();
+console.log('Providers:', providers.map((p) => p.name));
+
+// Get the full static model list
+const staticModels = manager.getStaticModelList();
+console.log('Static models:', staticModels.length);
+
+// Fetch both static and dynamic models (with API keys)
+const models = await manager.updateModelList({
+  apiKeys: { OpenAI: process.env.OPENAI_API_KEY },
+});
+console.log('All models:', models.map((m) => m.name));
+
+// Retrieve a specific provider and call a model
+const openai = manager.getProvider('OpenAI');
+if (openai) {
+  const modelInstance = openai.getModelInstance({
+    model: 'gpt-4o',
+    serverEnv: {},
+    apiKeys: { OpenAI: process.env.OPENAI_API_KEY },
+  });
+  console.log('Model instance ready:', !!modelInstance);
+}
+```
+
+
 
 ```
 app/lib/modules/
@@ -167,6 +213,12 @@ app/lib/modules/
 │   ├── compute-node.ts    # Compute node
 │   ├── task-scheduler.ts  # Task scheduler
 │   └── communication.ts   # Inter-node communication
+├── llm/                    # LLM provider management
+│   ├── manager.ts         # LLMManager singleton
+│   ├── base-provider.ts   # BaseProvider abstract class
+│   ├── types.ts           # Shared type definitions
+│   ├── registry.ts        # Provider registry (all bundled providers)
+│   └── providers/         # Individual provider implementations
 └── index.ts               # Main exports
 ```
 
@@ -203,6 +255,15 @@ app/lib/modules/
 - ✅ Inter-node communication
 - ✅ Heartbeat and health monitoring
 - ✅ Load balancing
+
+### LLM Features
+- ✅ Singleton `LLMManager` with automatic provider registration
+- ✅ 19 built-in provider implementations
+- ✅ Static model lists per provider
+- ✅ Dynamic model discovery (providers that support it)
+- ✅ Caching layer for dynamic model lists
+- ✅ Flexible API-key and base-URL resolution
+- ✅ Extensible `BaseProvider` base class for custom providers
 
 ## API Reference
 
@@ -272,6 +333,39 @@ const scheduler = createScheduler(config?: Partial<SchedulerConfig>): TaskSchedu
 scheduler.submitTask(task: Task): string
 ```
 
+### LLM API
+
+```typescript
+// Get manager singleton
+const manager = LLMManager.getInstance(env?: Record<string, string>): LLMManager
+
+// Provider management
+manager.registerProvider(provider: BaseProvider): void
+manager.getProvider(name: string): BaseProvider | undefined
+manager.getAllProviders(): BaseProvider[]
+manager.getDefaultProvider(): BaseProvider
+
+// Model listing
+manager.getModelList(): ModelInfo[]
+manager.getStaticModelList(): ModelInfo[]
+manager.updateModelList(options: { apiKeys?, providerSettings?, serverEnv? }): Promise<ModelInfo[]>
+manager.getModelListFromProvider(provider: BaseProvider, options): Promise<ModelInfo[]>
+manager.getStaticModelListFromProvider(provider: BaseProvider): ModelInfo[]
+
+// BaseProvider – implement to add a custom provider
+abstract class BaseProvider {
+  abstract name: string;
+  abstract staticModels: ModelInfo[];
+  abstract config: ProviderConfig;
+  abstract getModelInstance(options): LanguageModelV1;
+
+  getProviderBaseUrlAndKey(options): { baseUrl?: string; apiKey?: string }
+  getModelsFromCache(options): ModelInfo[] | null
+  storeDynamicModels(options, models: ModelInfo[]): void
+  getDynamicModels?(apiKeys?, settings?, serverEnv?): Promise<ModelInfo[]>   // optional
+}
+```
+
 ## Testing
 
 Tests are located in `app/lib/modules/__tests__/`:
@@ -279,6 +373,7 @@ Tests are located in `app/lib/modules/__tests__/`:
 - `ml.spec.ts` - ML operations tests
 - `nn.spec.ts` - Neural network tests
 - `distributed.spec.ts` - Distributed computing tests
+- `llm.spec.ts` - LLM manager and provider tests
 
 Run tests with:
 ```bash

@@ -1,3 +1,65 @@
+# Additional LLM Provider Integrations: Azure OpenAI, Vertex AI, and IBM Granite
+
+## Overview
+
+This implementation adds three new LLM provider integrations to the nn.llmbol.dis.vm system, completing the "Additional Provider Integrations" milestone listed in the project roadmap. Each provider follows the established `BaseProvider` pattern and is automatically discovered by `LLMManager` at startup.
+
+## New Files
+
+### 1. `app/lib/modules/llm/providers/azure-openai.ts`
+
+- Integrates Azure OpenAI Service using `@ai-sdk/azure`
+- Supports GPT-4o, GPT-4o Mini, GPT-4 Turbo, and GPT-3.5 Turbo deployments
+- Configurable via `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_RESOURCE_NAME`, and `AZURE_OPENAI_API_VERSION`
+- Defaults to API version `2024-10-01-preview`
+
+### 2. `app/lib/modules/llm/providers/vertex-ai.ts`
+
+- Integrates Google Cloud Vertex AI using `@ai-sdk/google-vertex`
+- Exposes Gemini 1.5 Pro, Gemini 1.5 Flash, Gemini 2.0 Flash, and Gemini 2.0 Pro models
+- Configurable via `VERTEX_AI_PROJECT` and `VERTEX_AI_LOCATION` (defaults to `us-central1`)
+- Uses Application Default Credentials for Google Cloud authentication
+
+### 3. `app/lib/modules/llm/providers/granite.ts`
+
+- Integrates IBM Granite foundation models via IBM watsonx.ai
+- Static models include Granite 3 8B Instruct, Granite 3 2B Instruct, Granite 20B Multilingual, Granite 34B Code Instruct, and Granite 8B Code Instruct
+- Dynamic model discovery queries the watsonx.ai foundation model catalog
+- Configurable via `WATSONX_API_KEY`, `WATSONX_PROJECT_ID`, and `WATSONX_BASE_URL`
+- Accesses the OpenAI-compatible chat completions endpoint on watsonx.ai
+
+## Modified Files
+
+### 1. `app/lib/modules/llm/registry.ts`
+
+- Registered `AzureOpenAIProvider`, `VertexAIProvider`, and `GraniteProvider`
+
+### 2. `package.json`
+
+- Added `@ai-sdk/azure@1.0.7` dependency for Azure OpenAI support
+- Added `@ai-sdk/google-vertex@2.0.7` dependency for Vertex AI support
+
+### 3. `.env.example`
+
+- Added configuration examples for Azure OpenAI (`AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_RESOURCE_NAME`, `AZURE_OPENAI_API_VERSION`)
+- Added configuration examples for Vertex AI (`VERTEX_AI_PROJECT`, `VERTEX_AI_LOCATION`)
+- Added configuration examples for IBM watsonx.ai (`WATSONX_API_KEY`, `WATSONX_PROJECT_ID`, `WATSONX_BASE_URL`)
+
+### 4. `app/lib/modules/__tests__/llm.spec.ts`
+
+- Extended with test suites for `AzureOpenAIProvider`, `VertexAIProvider`, and `GraniteProvider`
+- Tests cover provider metadata, static model listings, API key link validity, config keys, and error handling
+
+## Key Features
+
+1. **Azure OpenAI**: Full enterprise-grade Azure OpenAI integration with configurable API version and deployment names as model identifiers
+2. **Vertex AI**: Google Cloud Vertex AI integration with support for all current Gemini 2.x models and Application Default Credentials
+3. **IBM Granite**: Open-weight Granite foundation models including specialized code models through the IBM watsonx.ai platform
+4. **Automatic Registration**: All three providers are auto-registered by `LLMManager` via the provider registry pattern
+5. **Dynamic Discovery**: `GraniteProvider` includes dynamic model listing from the watsonx.ai foundation model catalog
+
+---
+
 # File and Folder Locking Feature Implementation
 
 ## Overview

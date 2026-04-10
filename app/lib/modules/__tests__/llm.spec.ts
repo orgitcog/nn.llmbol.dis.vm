@@ -1,6 +1,9 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { LLMManager } from '../llm/manager';
 import { BaseProvider } from '../llm/base-provider';
+import AzureOpenAIProvider from '../llm/providers/azure-openai';
+import VertexAIProvider from '../llm/providers/vertex-ai';
+import GraniteProvider from '../llm/providers/granite';
 import type { ModelInfo, ProviderConfig } from '../llm/types';
 import type { LanguageModelV1 } from 'ai';
 
@@ -425,5 +428,166 @@ describe('LLMManager', () => {
       const unregistered = new MockProvider();
       await expect(manager.getModelListFromProvider(unregistered, {})).rejects.toThrow();
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AzureOpenAIProvider unit tests
+// ---------------------------------------------------------------------------
+
+describe('AzureOpenAIProvider', () => {
+  let provider: AzureOpenAIProvider;
+
+  beforeEach(() => {
+    provider = new AzureOpenAIProvider();
+  });
+
+  it('should have the correct name', () => {
+    expect(provider.name).toBe('AzureOpenAI');
+  });
+
+  it('should expose static models', () => {
+    expect(provider.staticModels.length).toBeGreaterThan(0);
+    const names = provider.staticModels.map((m) => m.name);
+    expect(names).toContain('gpt-4o');
+    expect(names).toContain('gpt-4o-mini');
+  });
+
+  it('should have all static models marked with AzureOpenAI provider', () => {
+    for (const model of provider.staticModels) {
+      expect(model.provider).toBe('AzureOpenAI');
+    }
+  });
+
+  it('should expose an API key link', () => {
+    expect(provider.getApiKeyLink).toBeDefined();
+    expect(provider.getApiKeyLink).toContain('portal.azure.com');
+  });
+
+  it('should use AZURE_OPENAI_API_KEY as the token key', () => {
+    expect(provider.config.apiTokenKey).toBe('AZURE_OPENAI_API_KEY');
+  });
+
+  it('should throw when resource name is missing', () => {
+    expect(() =>
+      provider.getModelInstance({
+        model: 'gpt-4o',
+        serverEnv: {} as any,
+        apiKeys: { AzureOpenAI: 'test-key' },
+        providerSettings: {},
+      }),
+    ).toThrow(/resource name/i);
+  });
+
+  it('should throw when API key is missing', () => {
+    expect(() =>
+      provider.getModelInstance({
+        model: 'gpt-4o',
+        serverEnv: { AZURE_OPENAI_RESOURCE_NAME: 'my-resource' } as any,
+      }),
+    ).toThrow(/API key/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// VertexAIProvider unit tests
+// ---------------------------------------------------------------------------
+
+describe('VertexAIProvider', () => {
+  let provider: VertexAIProvider;
+
+  beforeEach(() => {
+    provider = new VertexAIProvider();
+  });
+
+  it('should have the correct name', () => {
+    expect(provider.name).toBe('VertexAI');
+  });
+
+  it('should expose static Gemini models', () => {
+    expect(provider.staticModels.length).toBeGreaterThan(0);
+    const names = provider.staticModels.map((m) => m.name);
+    expect(names).toContain('gemini-1.5-pro');
+    expect(names).toContain('gemini-1.5-flash');
+  });
+
+  it('should have all static models marked with VertexAI provider', () => {
+    for (const model of provider.staticModels) {
+      expect(model.provider).toBe('VertexAI');
+    }
+  });
+
+  it('should expose an API key link pointing to Vertex AI console', () => {
+    expect(provider.getApiKeyLink).toBeDefined();
+    expect(provider.getApiKeyLink).toContain('console.cloud.google.com');
+  });
+
+  it('should use VERTEX_AI_PROJECT as the base URL key', () => {
+    expect(provider.config.baseUrlKey).toBe('VERTEX_AI_PROJECT');
+  });
+
+  it('should throw when project ID is missing', () => {
+    expect(() =>
+      provider.getModelInstance({
+        model: 'gemini-1.5-pro',
+        serverEnv: {} as any,
+      }),
+    ).toThrow(/project/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GraniteProvider unit tests
+// ---------------------------------------------------------------------------
+
+describe('GraniteProvider', () => {
+  let provider: GraniteProvider;
+
+  beforeEach(() => {
+    provider = new GraniteProvider();
+  });
+
+  it('should have the correct name', () => {
+    expect(provider.name).toBe('Granite');
+  });
+
+  it('should expose IBM Granite static models', () => {
+    expect(provider.staticModels.length).toBeGreaterThan(0);
+    const names = provider.staticModels.map((m) => m.name);
+    expect(names).toContain('ibm/granite-3-8b-instruct');
+    expect(names).toContain('ibm/granite-34b-code-instruct');
+  });
+
+  it('should have all static models marked with Granite provider', () => {
+    for (const model of provider.staticModels) {
+      expect(model.provider).toBe('Granite');
+    }
+  });
+
+  it('should expose an API key link pointing to IBM Cloud', () => {
+    expect(provider.getApiKeyLink).toBeDefined();
+    expect(provider.getApiKeyLink).toContain('cloud.ibm.com');
+  });
+
+  it('should use WATSONX_API_KEY as the token key', () => {
+    expect(provider.config.apiTokenKey).toBe('WATSONX_API_KEY');
+  });
+
+  it('should default to us-south watsonx.ai base URL', () => {
+    expect(provider.config.baseUrl).toContain('us-south.ml.cloud.ibm.com');
+  });
+
+  it('should throw when API key is missing', () => {
+    expect(() =>
+      provider.getModelInstance({
+        model: 'ibm/granite-3-8b-instruct',
+        serverEnv: {} as any,
+      }),
+    ).toThrow(/API key/i);
+  });
+
+  it('should return empty array from getDynamicModels when credentials are missing', async () => {
+    const models = await provider.getDynamicModels();
+    expect(models).toEqual([]);
   });
 });

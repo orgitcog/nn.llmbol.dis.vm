@@ -89,6 +89,7 @@ export const ChatImpl = memo(
     const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
     const [imageDataList, setImageDataList] = useState<string[]>([]);
+    const [documentContentList, setDocumentContentList] = useState<string[]>([]);
     const [searchParams, setSearchParams] = useSearchParams();
     const [fakeLoading, setFakeLoading] = useState(false);
     const files = useStore(workbenchStore.files);
@@ -359,6 +360,28 @@ export const ChatImpl = memo(
       return parts;
     };
 
+    // Build a context preamble from uploaded document files so the AI can reference them
+    const buildDocumentContext = (files: File[], contentList: string[]): string => {
+      const blocks = files
+        .map((file, i) => {
+          const content = contentList[i];
+
+          if (!content) {
+            return null;
+          }
+
+          const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+          return `<document name="${file.name}">\n\`\`\`${ext}\n${content}\n\`\`\`\n</document>`;
+        })
+        .filter(Boolean);
+
+      if (blocks.length === 0) {
+        return '';
+      }
+
+      return `<knowledge_documents>\nThe following documents have been uploaded as reference material:\n\n${blocks.join('\n\n')}\n</knowledge_documents>\n\n`;
+    };
+
     // Helper function to convert File[] to Attachment[] for AI SDK
     const filesToAttachments = async (files: File[]): Promise<Attachment[] | undefined> => {
       if (files.length === 0) {
@@ -407,6 +430,12 @@ export const ChatImpl = memo(
         finalMessageContent = messageContent + elementInfo;
       }
 
+      const docContext = buildDocumentContext(uploadedFiles, documentContentList);
+
+      if (docContext) {
+        finalMessageContent = docContext + finalMessageContent;
+      }
+
       runAnimation();
 
       if (!chatStarted) {
@@ -439,7 +468,7 @@ export const ChatImpl = memo(
                   id: `1-${new Date().getTime()}`,
                   role: 'user',
                   content: userMessageText,
-                  parts: createMessageParts(userMessageText, imageDataList),
+                  parts: createMessageParts(userMessageText, imageDataList.filter(Boolean)),
                 },
                 {
                   id: `2-${new Date().getTime()}`,
@@ -465,6 +494,7 @@ export const ChatImpl = memo(
 
               setUploadedFiles([]);
               setImageDataList([]);
+              setDocumentContentList([]);
 
               resetEnhancer();
 
@@ -485,7 +515,7 @@ export const ChatImpl = memo(
             id: `${new Date().getTime()}`,
             role: 'user',
             content: userMessageText,
-            parts: createMessageParts(userMessageText, imageDataList),
+            parts: createMessageParts(userMessageText, imageDataList.filter(Boolean)),
             experimental_attachments: attachments,
           },
         ]);
@@ -496,6 +526,7 @@ export const ChatImpl = memo(
 
         setUploadedFiles([]);
         setImageDataList([]);
+        setDocumentContentList([]);
 
         resetEnhancer();
 
@@ -523,7 +554,7 @@ export const ChatImpl = memo(
           {
             role: 'user',
             content: messageText,
-            parts: createMessageParts(messageText, imageDataList),
+            parts: createMessageParts(messageText, imageDataList.filter(Boolean)),
           },
           attachmentOptions,
         );
@@ -539,7 +570,7 @@ export const ChatImpl = memo(
           {
             role: 'user',
             content: messageText,
-            parts: createMessageParts(messageText, imageDataList),
+            parts: createMessageParts(messageText, imageDataList.filter(Boolean)),
           },
           attachmentOptions,
         );
@@ -550,6 +581,7 @@ export const ChatImpl = memo(
 
       setUploadedFiles([]);
       setImageDataList([]);
+      setDocumentContentList([]);
 
       resetEnhancer();
 
@@ -647,6 +679,8 @@ export const ChatImpl = memo(
         setUploadedFiles={setUploadedFiles}
         imageDataList={imageDataList}
         setImageDataList={setImageDataList}
+        documentContentList={documentContentList}
+        setDocumentContentList={setDocumentContentList}
         actionAlert={actionAlert}
         clearAlert={() => workbenchStore.clearAlert()}
         supabaseAlert={supabaseAlert}

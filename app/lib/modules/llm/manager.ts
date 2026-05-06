@@ -12,8 +12,16 @@ export class LLMManager {
   private readonly _env: any = {};
 
   private constructor(_env: Record<string, string>) {
-    this._registerProvidersFromDirectory();
     this._env = _env;
+  }
+
+  /**
+   * Register all built-in providers from the provider registry.
+   * Must be called explicitly after getInstance() in production code.
+   * Not called automatically in the constructor to allow test isolation.
+   */
+  initBuiltInProviders() {
+    this._registerProvidersFromDirectory();
   }
 
   static getInstance(env: Record<string, string> = {}): LLMManager {
@@ -84,7 +92,7 @@ export class LLMManager {
     let enabledProviders = Array.from(this._providers.values()).map((p) => p.name);
 
     if (providerSettings && Object.keys(providerSettings).length > 0) {
-      enabledProviders = enabledProviders.filter((p) => providerSettings[p].enabled);
+      enabledProviders = enabledProviders.filter((p) => providerSettings[p]?.enabled !== false);
     }
 
     // Get dynamic models from all providers that support them

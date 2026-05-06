@@ -20,7 +20,12 @@ export { TensorOps } from './ml/tensor-ops';
 
 export { Quantization, type QuantizationType, type QuantizationConfig } from './ml/quantization';
 
-export { InferenceEngine, createInferenceEngine, type InferenceConfig } from './ml/inference-engine';
+export {
+  InferenceEngine,
+  createInferenceEngine,
+  type InferenceConfig,
+  type EmbeddingWeights,
+} from './ml/inference-engine';
 
 // NN Module Exports
 export {
@@ -35,7 +40,18 @@ export {
   type ConvConfig,
 } from './nn/nn.b';
 
-export { Linear, ReLU, Tanh, Sigmoid, Dropout, BatchNorm, Conv1d } from './nn/nn-modules';
+export {
+  Linear,
+  ReLU,
+  Tanh,
+  Sigmoid,
+  Dropout,
+  BatchNorm,
+  Conv1d,
+  LayerNorm,
+  MultiHeadAttention,
+  Embedding,
+} from './nn/nn-modules';
 
 export {
   LayerFactory,
@@ -46,6 +62,9 @@ export {
   dropout,
   batchNorm,
   conv1d,
+  layerNorm,
+  multiHeadAttention,
+  embedding,
   type LayerType,
   type LayerConfig,
 } from './nn/layer-factory';
@@ -72,10 +91,17 @@ export {
 export {
   Communication,
   createCommunication,
+  createCommunicationWithTransport,
+  BroadcastChannelTransport,
+  WebSocketTransport,
+  type TransportAdapter,
   type Message,
   type MessageType,
   type CommunicationConfig,
 } from './distributed/communication';
+
+// Bridge Exports
+export { NNVMBridge, MLVMBridge, type MemorySegment } from './bridges';
 
 // LLM Module Exports
 export { LLMManager } from './llm/manager';
@@ -103,5 +129,6 @@ export const SYSTEM_INFO = {
     nn: 'Torch7-style neural network architecture',
     distributed: 'Distributed compute capabilities',
     llm: 'Multi-provider LLM manager with dynamic model discovery',
+    bridges: 'VM↔ML/NN integration bridges',
   },
 };

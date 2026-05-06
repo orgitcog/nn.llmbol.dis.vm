@@ -2,6 +2,7 @@
  * Inter-Node Communication
  *
  * Handles message passing and communication between distributed compute nodes
+ * with pluggable transport adapters.
  */
 
 export type MessageType = 'request' | 'response' | 'broadcast' | 'heartbeat';
@@ -21,127 +22,299 @@ export interface CommunicationConfig {
   maxRetries: number;
 }
 
-export class Communication {
-  private nodeId: string;
-  private peers: Map<string, { lastSeen: number; status: 'online' | 'offline' }>;
-  private messageHandlers: Map<MessageType, (msg: Message) => void>;
-  private pendingMessages: Map<string, Message>;
-  private config: CommunicationConfig;
-  private heartbeatTimer?: NodeJS.Timeout;
+/**
+ * Pluggable transport backend for delivering messages between nodes.
+ */
+export interface TransportAdapter {
+  /** Deliver `message` to one or more recipients. */
+  send(to: string | string[], message: Message): Promise<void>;
 
-  constructor(nodeId: string, config: Partial<CommunicationConfig> = {}) {
-    this.nodeId = nodeId;
-    this.peers = new Map();
-    this.messageHandlers = new Map();
-    this.pendingMessages = new Map();
-    this.config = {
-      heartbeatInterval: config.heartbeatInterval || 5000,
-      messageTimeout: config.messageTimeout || 10000,
-      maxRetries: config.maxRetries || 3,
+  /** Register a handler invoked for every received message. */
+  onReceive(handler: (message: Message) => void): void;
+
+  /** Returns true when the transport is ready to send. */
+  isConnected(): boolean;
+}
+
+/** In-memory fallback handler registry keyed by channel name. */
+const _bcFallbackHandlers: Map<string, Array<(msg: Message) => void>> = new Map();
+
+/**
+ * Transport backed by the BroadcastChannel API.
+ * Falls back to an in-memory handler map in environments without BroadcastChannel.
+ */
+export class BroadcastChannelTransport implements TransportAdapter {
+  private _channel: BroadcastChannel | null = null;
+  private _handler: ((msg: Message) => void) | null = null;
+  private readonly _channelName: string;
+
+  constructor(channelName: string = 'nn-vm-distributed') {
+    this._channelName = channelName;
+
+    if (typeof BroadcastChannel !== 'undefined') {
+      this._channel = new BroadcastChannel(channelName);
+    }
+  }
+
+  /** Broadcast the message over the channel (or in-memory fallback). */
+  async send(_to: string | string[], message: Message): Promise<void> {
+    if (this._channel) {
+      this._channel.postMessage(JSON.stringify(message));
+    } else {
+      const handlers = _bcFallbackHandlers.get(this._channelName) ?? [];
+
+      for (const h of handlers) {
+        h(message);
+      }
+    }
+  }
+
+  /** Register a handler for incoming messages. */
+  onReceive(handler: (message: Message) => void): void {
+    this._handler = handler;
+
+    if (this._channel) {
+      this._channel.onmessage = (event: MessageEvent) => {
+        try {
+          const msg = JSON.parse(event.data as string) as Message;
+          handler(msg);
+        } catch {
+          // ignore malformed messages
+        }
+      };
+    } else {
+      const existing = _bcFallbackHandlers.get(this._channelName) ?? [];
+      existing.push(handler);
+      _bcFallbackHandlers.set(this._channelName, existing);
+    }
+  }
+
+  /** Returns true when the channel has been initialised. */
+  isConnected(): boolean {
+    return this._channel !== null || _bcFallbackHandlers.has(this._channelName);
+  }
+}
+
+/**
+ * Transport backed by a WebSocket connection.
+ * Queues outbound messages while the socket is not yet open.
+ */
+export class WebSocketTransport implements TransportAdapter {
+  private _ws: WebSocket | null = null;
+  private _handler: ((msg: Message) => void) | null = null;
+  private readonly _url: string;
+  private _queue: Message[] = [];
+
+  constructor(url: string) {
+    this._url = url;
+  }
+
+  /** Open the WebSocket connection. No-op in environments without WebSocket. */
+  connect(): void {
+    if (typeof WebSocket === 'undefined') {
+      this._ws = null;
+      return;
+    }
+
+    this._ws = new WebSocket(this._url);
+
+    this._ws.onmessage = (event: MessageEvent) => {
+      if (this._handler) {
+        try {
+          const msg = JSON.parse(event.data as string) as Message;
+          this._handler(msg);
+        } catch {
+          // ignore malformed messages
+        }
+      }
+    };
+
+    this._ws.onopen = () => {
+      for (const msg of this._queue) {
+        this._ws?.send(JSON.stringify(msg));
+      }
+
+      this._queue = [];
     };
   }
 
-  /**
-   * Start communication
-   */
-  start(): void {
-    this.startHeartbeat();
+  /** Send via WebSocket if open, otherwise queue the message. */
+  async send(_to: string | string[], message: Message): Promise<void> {
+    if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+      this._ws.send(JSON.stringify(message));
+    } else {
+      this._queue.push(message);
+    }
+  }
+
+  /** Register a handler for incoming messages. */
+  onReceive(handler: (message: Message) => void): void {
+    this._handler = handler;
+  }
+
+  /** Returns true when the WebSocket is in the OPEN state. */
+  isConnected(): boolean {
+    return this._ws !== null && this._ws.readyState === WebSocket.OPEN;
+  }
+}
+
+export class Communication {
+  private _nodeId: string;
+  private _peers: Map<string, { lastSeen: number; status: 'online' | 'offline' }>;
+  private _messageHandlers: Map<MessageType, (msg: Message) => void>;
+  private _pendingMessages: Map<string, Message>;
+  private _config: CommunicationConfig;
+  private _heartbeatTimer?: ReturnType<typeof setInterval>;
+  private _transport: TransportAdapter;
+
+  constructor(nodeId: string, config: Partial<CommunicationConfig> = {}, transport?: TransportAdapter) {
+    this._nodeId = nodeId;
+    this._peers = new Map();
+    this._messageHandlers = new Map();
+    this._pendingMessages = new Map();
+    this._config = {
+      heartbeatInterval: config.heartbeatInterval ?? 5000,
+      messageTimeout: config.messageTimeout ?? 10000,
+      maxRetries: config.maxRetries ?? 3,
+    };
+    this._transport = transport ?? new BroadcastChannelTransport();
   }
 
   /**
-   * Stop communication
+   * Start communication and register the transport receive handler.
+   */
+  start(): void {
+    this._transport.onReceive((msg) => this.handleMessage(msg));
+    this._startHeartbeat();
+  }
+
+  /**
+   * Stop communication and cancel the heartbeat timer.
    */
   stop(): void {
-    if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer);
-      this.heartbeatTimer = undefined;
+    if (this._heartbeatTimer !== undefined) {
+      clearInterval(this._heartbeatTimer);
+      this._heartbeatTimer = undefined;
     }
   }
 
   /**
-   * Send a message
+   * Send a message to one or more peers.
    */
   async send(to: string | string[], payload: any, type: MessageType = 'request'): Promise<Message> {
     const message: Message = {
-      id: this.generateMessageId(),
+      id: this._generateMessageId(),
       type,
-      from: this.nodeId,
+      from: this._nodeId,
       to,
       payload,
       timestamp: Date.now(),
     };
 
-    this.pendingMessages.set(message.id, message);
-
-    // Simulate message transmission
-    await this.transmit(message);
+    this._pendingMessages.set(message.id, message);
+    await this._transmit(message);
 
     return message;
   }
 
   /**
-   * Broadcast a message to all peers
+   * Broadcast a message to all known peers.
    */
   async broadcast(payload: any): Promise<void> {
-    const peerIds = Array.from(this.peers.keys());
+    const peerIds = Array.from(this._peers.keys());
 
     const message: Message = {
-      id: this.generateMessageId(),
+      id: this._generateMessageId(),
       type: 'broadcast',
-      from: this.nodeId,
+      from: this._nodeId,
       to: peerIds,
       payload,
       timestamp: Date.now(),
     };
 
-    await this.transmit(message);
+    await this._transmit(message);
   }
 
   /**
-   * Register a message handler
+   * Register a handler for a specific message type.
    */
   onMessage(type: MessageType, handler: (msg: Message) => void): void {
-    this.messageHandlers.set(type, handler);
+    this._messageHandlers.set(type, handler);
   }
 
   /**
-   * Handle incoming message
+   * Handle an incoming message, invoking the registered handler and updating peer state.
    */
   async handleMessage(message: Message): Promise<void> {
-    const handler = this.messageHandlers.get(message.type);
+    const handler = this._messageHandlers.get(message.type);
 
     if (handler) {
       handler(message);
     }
 
-    // Update peer status
-    if (message.from !== this.nodeId) {
-      this.updatePeer(message.from);
+    if (message.from !== this._nodeId) {
+      this._updatePeer(message.from);
     }
   }
 
   /**
-   * Register a peer
+   * Register a peer node by ID.
    */
   registerPeer(peerId: string): void {
-    this.peers.set(peerId, {
-      lastSeen: Date.now(),
-      status: 'online',
-    });
+    this._peers.set(peerId, { lastSeen: Date.now(), status: 'online' });
   }
 
   /**
-   * Unregister a peer
+   * Unregister a peer node. Returns true if it existed.
    */
   unregisterPeer(peerId: string): boolean {
-    return this.peers.delete(peerId);
+    return this._peers.delete(peerId);
   }
 
   /**
-   * Update peer last seen time
+   * Get the current status of a peer.
    */
-  private updatePeer(peerId: string): void {
-    const peer = this.peers.get(peerId);
+  getPeerStatus(peerId: string): 'online' | 'offline' | 'unknown' {
+    const peer = this._peers.get(peerId);
+    return peer ? peer.status : 'unknown';
+  }
+
+  /**
+   * Get all registered peer IDs.
+   */
+  getPeers(): string[] {
+    return Array.from(this._peers.keys());
+  }
+
+  /**
+   * Get IDs of all peers currently marked online.
+   */
+  getOnlinePeers(): string[] {
+    return Array.from(this._peers.entries())
+      .filter(([, peer]) => peer.status === 'online')
+      .map(([id]) => id);
+  }
+
+  /**
+   * Get communication statistics for this node.
+   */
+  getStats() {
+    const totalPeers = this._peers.size;
+    const onlinePeers = this.getOnlinePeers().length;
+    const offlinePeers = totalPeers - onlinePeers;
+
+    return {
+      nodeId: this._nodeId,
+      totalPeers,
+      onlinePeers,
+      offlinePeers,
+      pendingMessages: this._pendingMessages.size,
+      config: this._config,
+    };
+  }
+
+  private _updatePeer(peerId: string): void {
+    const peer = this._peers.get(peerId);
 
     if (peer) {
       peer.lastSeen = Date.now();
@@ -151,110 +324,78 @@ export class Communication {
     }
   }
 
-  /**
-   * Start heartbeat
-   */
-  private startHeartbeat(): void {
-    this.heartbeatTimer = setInterval(() => {
-      this.sendHeartbeat();
-      this.checkPeerStatus();
-    }, this.config.heartbeatInterval);
+  private _startHeartbeat(): void {
+    this._heartbeatTimer = setInterval(() => {
+      this._sendHeartbeat();
+      this._checkPeerStatus();
+    }, this._config.heartbeatInterval);
   }
 
-  /**
-   * Send heartbeat to all peers
-   */
-  private async sendHeartbeat(): Promise<void> {
-    const peerIds = Array.from(this.peers.keys());
+  private async _sendHeartbeat(): Promise<void> {
+    const peerIds = Array.from(this._peers.keys());
 
     if (peerIds.length > 0) {
       await this.send(peerIds, { status: 'alive' }, 'heartbeat');
     }
   }
 
-  /**
-   * Check peer status and mark offline if needed
-   */
-  private checkPeerStatus(): void {
+  private _checkPeerStatus(): void {
     const now = Date.now();
-    const timeout = this.config.heartbeatInterval * 3;
+    const timeout = this._config.heartbeatInterval * 3;
 
-    for (const [peerId, peer] of this.peers.entries()) {
+    for (const [, peer] of this._peers.entries()) {
       if (now - peer.lastSeen > timeout) {
         peer.status = 'offline';
       }
     }
   }
 
-  /**
-   * Transmit message (simulation)
-   */
-  private async transmit(message: Message): Promise<void> {
-    /*
-     * In a real implementation, this would use actual network transport
-     * (WebSockets, HTTP, gRPC, etc.)
-     */
+  private async _transmit(message: Message): Promise<void> {
+    let lastError: Error | undefined;
 
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, Math.random() * 10));
+    for (let attempt = 0; attempt <= this._config.maxRetries; attempt++) {
+      try {
+        await Promise.race([
+          this._transport.send(message.to, message),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Message timeout')), this._config.messageTimeout),
+          ),
+        ]);
+        this._pendingMessages.delete(message.id);
 
-    // Remove from pending
-    this.pendingMessages.delete(message.id);
+        return;
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+
+        if (attempt < this._config.maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+    }
+
+    this._pendingMessages.delete(message.id);
+    throw lastError;
   }
 
-  /**
-   * Generate unique message ID
-   */
-  private generateMessageId(): string {
-    return `${this.nodeId}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-  }
-
-  /**
-   * Get peer status
-   */
-  getPeerStatus(peerId: string): 'online' | 'offline' | 'unknown' {
-    const peer = this.peers.get(peerId);
-    return peer ? peer.status : 'unknown';
-  }
-
-  /**
-   * Get all peers
-   */
-  getPeers(): string[] {
-    return Array.from(this.peers.keys());
-  }
-
-  /**
-   * Get online peers
-   */
-  getOnlinePeers(): string[] {
-    return Array.from(this.peers.entries())
-      .filter(([_, peer]) => peer.status === 'online')
-      .map(([id, _]) => id);
-  }
-
-  /**
-   * Get communication statistics
-   */
-  getStats() {
-    const totalPeers = this.peers.size;
-    const onlinePeers = this.getOnlinePeers().length;
-    const offlinePeers = totalPeers - onlinePeers;
-
-    return {
-      nodeId: this.nodeId,
-      totalPeers,
-      onlinePeers,
-      offlinePeers,
-      pendingMessages: this.pendingMessages.size,
-      config: this.config,
-    };
+  private _generateMessageId(): string {
+    return `${this._nodeId}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   }
 }
 
 /**
- * Create a new communication instance
+ * Create a new Communication instance with the default BroadcastChannel transport.
  */
 export function createCommunication(nodeId: string, config?: Partial<CommunicationConfig>): Communication {
   return new Communication(nodeId, config);
+}
+
+/**
+ * Create a new Communication instance with a custom transport adapter.
+ */
+export function createCommunicationWithTransport(
+  nodeId: string,
+  transport: TransportAdapter,
+  config?: Partial<CommunicationConfig>,
+): Communication {
+  return new Communication(nodeId, config, transport);
 }

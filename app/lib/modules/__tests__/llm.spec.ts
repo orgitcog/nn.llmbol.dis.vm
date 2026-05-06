@@ -1,10 +1,10 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { LLMManager } from '../llm/manager';
-import { BaseProvider } from '../llm/base-provider';
-import AzureOpenAIProvider from '../llm/providers/azure-openai';
-import VertexAIProvider from '../llm/providers/vertex-ai';
-import GraniteProvider from '../llm/providers/granite';
-import type { ModelInfo, ProviderConfig } from '../llm/types';
+import { LLMManager } from '~/lib/modules/llm/manager';
+import { BaseProvider } from '~/lib/modules/llm/base-provider';
+import AzureOpenAIProvider from '~/lib/modules/llm/providers/azure-openai';
+import VertexAIProvider from '~/lib/modules/llm/providers/vertex-ai';
+import GraniteProvider from '~/lib/modules/llm/providers/granite';
+import type { ModelInfo, ProviderConfig } from '~/lib/modules/llm/types';
 import type { LanguageModelV1 } from 'ai';
 
 /*

@@ -1,8 +1,8 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { ComputeNode, createComputeNode } from '../distributed/compute-node';
-import { TaskScheduler, createScheduler, createTask } from '../distributed/task-scheduler';
-import { Communication, createCommunication } from '../distributed/communication';
-import type { Task } from '../distributed/compute-node';
+import { ComputeNode, createComputeNode } from '~/lib/modules/distributed/compute-node';
+import { TaskScheduler, createScheduler, createTask } from '~/lib/modules/distributed/task-scheduler';
+import { createCommunication } from '~/lib/modules/distributed/communication';
+import type { Task } from '~/lib/modules/distributed/compute-node';
 
 describe('ComputeNode', () => {
   describe('Node Creation', () => {
@@ -247,7 +247,7 @@ describe('Communication', () => {
       const comm = createCommunication('node1');
       let received = false;
 
-      comm.onMessage('request', (msg) => {
+      comm.onMessage('request', (_msg) => {
         received = true;
       });
 

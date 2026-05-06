@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { InfernoVM, createVM, getGlobalVM } from '../vm/diy.dis';
-import { BytecodeLoader } from '../vm/bytecode-loader';
-import { runtime } from '../vm/vm-runtime';
+import { InfernoVM, createVM, getGlobalVM } from '~/lib/modules/vm/diy.dis';
+import { BytecodeLoader } from '~/lib/modules/vm/bytecode-loader';
+import { runtime } from '~/lib/modules/vm/vm-runtime';
 
 describe('InfernoVM', () => {
   describe('VM Creation', () => {

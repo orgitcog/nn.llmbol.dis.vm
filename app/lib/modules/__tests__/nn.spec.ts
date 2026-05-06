@@ -1,9 +1,9 @@
-import { describe, expect, it, beforeEach } from 'vitest';
-import { nn, Sequential, Parallel } from '../nn/nn.b';
-import { Linear, ReLU, Dropout } from '../nn/nn-modules';
-import { LayerFactory, linear, relu } from '../nn/layer-factory';
-import { ModelBuilder, buildModel, createFeedforwardModel } from '../nn/model-builder';
-import type { Tensor } from '../ml/ml.m';
+import { describe, expect, it } from 'vitest';
+import { nn, Sequential, Parallel } from '~/lib/modules/nn/nn.b';
+import { Linear, ReLU, Dropout } from '~/lib/modules/nn/nn-modules';
+import { LayerFactory, linear, relu } from '~/lib/modules/nn/layer-factory';
+import { buildModel, createFeedforwardModel } from '~/lib/modules/nn/model-builder';
+import type { Tensor } from '~/lib/modules/ml/ml.m';
 
 describe('Sequential', () => {
   it('should create an empty sequential model', () => {

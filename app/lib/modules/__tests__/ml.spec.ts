@@ -1,8 +1,8 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { MLModule, createMLModule, getGlobalMLModule } from '../ml/ml.m';
-import { TensorOps } from '../ml/tensor-ops';
-import { Quantization } from '../ml/quantization';
-import type { Tensor } from '../ml/ml.m';
+import { MLModule, createMLModule } from '~/lib/modules/ml/ml.m';
+import { TensorOps } from '~/lib/modules/ml/tensor-ops';
+import { Quantization } from '~/lib/modules/ml/quantization';
+import type { Tensor } from '~/lib/modules/ml/ml.m';
 
 describe('MLModule', () => {
   let ml: MLModule;

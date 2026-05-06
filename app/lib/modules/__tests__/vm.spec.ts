@@ -135,7 +135,7 @@ describe('VMRuntime', () => {
 
     it('should execute bytecode', () => {
       const process = runtime.createProcess();
-      const bytecode = new Uint8Array([0x01, 0x05, 0xff]); // PUSH 5, HALT
+      const bytecode = new Uint8Array([0x03, 0x05, 0xff]); // PUSH_INT 5, HALT
 
       const result = runtime.execute(process.id, bytecode);
       expect(result).toBeDefined();

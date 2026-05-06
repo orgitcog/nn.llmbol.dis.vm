@@ -17,6 +17,7 @@ export const TOOL_EXECUTION_DENIED = 'Error: User denied access to tool executio
 export const TOOL_EXECUTION_ERROR = 'Error: An error occured while calling tool';
 
 const llmManager = LLMManager.getInstance(import.meta.env);
+llmManager.initBuiltInProviders();
 
 export const PROVIDER_LIST = llmManager.getAllProviders();
 export const DEFAULT_PROVIDER = llmManager.getDefaultProvider();

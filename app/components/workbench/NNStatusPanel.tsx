@@ -5,7 +5,7 @@ import { useNNStatus } from '~/lib/hooks/useNNStatus';
  * NNStatusPanel displays real-time status of the nn.llmbol.dis.vm subsystems.
  * Wire into Workbench.client.tsx behind a feature flag.
  */
-export function NNStatusPanel() {
+export function NnStatusPanel() {
   const { status, error, loading } = useNNStatus(15_000);
 
   if (loading && !status) {

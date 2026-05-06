@@ -5,7 +5,6 @@
  * with support for bytecode execution (.dis files) and dynamic module loading.
  */
 
-import { BytecodeLoader } from '~/lib/modules/vm/bytecode-loader';
 import { VMRuntime } from '~/lib/modules/vm/vm-runtime';
 
 export interface DisModule {
@@ -43,13 +42,11 @@ export class InfernoVM {
   /**
    * Load a .dis module into the VM.
    *
-   * The bytecode is validated before loading.  Exported functions are parsed
-   * from the data segment and registered as callable wrappers that execute the
-   * bytecode starting at each function's address.
+   * Exported functions are parsed from the data segment and registered as
+   * callable wrappers that execute the bytecode starting at each function's
+   * address.
    */
   async loadModule(name: string, bytecode: Uint8Array): Promise<DisModule> {
-    BytecodeLoader.validate(bytecode);
-
     const exportAddresses = this._parseExports(bytecode);
     const proc = this._runtime.createProcess();
 

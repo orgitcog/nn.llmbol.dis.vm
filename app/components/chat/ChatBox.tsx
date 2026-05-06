@@ -208,7 +208,12 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
                   props.setDocumentContentList?.([...(props.documentContentList ?? []), '']);
                 };
                 reader.readAsDataURL(file);
-              } else if (file.type.startsWith('text/') || file.name.match(/\.(md|markdown|json|yaml|yml|toml|ini|env|csv|ts|tsx|js|jsx|py|css|html|xml|sh|bash|zsh|rs|go|java|cpp|c|h|rb|php|swift|kt|r|sql)$/i)) {
+              } else if (
+                file.type.startsWith('text/') ||
+                file.name.match(
+                  /\.(md|markdown|json|yaml|yml|toml|ini|env|csv|ts|tsx|js|jsx|py|css|html|xml|sh|bash|zsh|rs|go|java|cpp|c|h|rb|php|swift|kt|r|sql)$/i,
+                )
+              ) {
                 const reader = new FileReader();
 
                 reader.onload = (e) => {

@@ -1,16 +1,20 @@
 /**
  * Inferno-inspired VM Deployment Engine
- * 
+ *
  * This module implements a VM deployment system inspired by Inferno OS,
  * with support for bytecode execution (.dis files) and dynamic module loading.
  */
+
+import { BytecodeLoader } from '~/lib/modules/vm/bytecode-loader';
+import { VMRuntime } from '~/lib/modules/vm/vm-runtime';
 
 export interface DisModule {
   name: string;
   version: string;
   bytecode: Uint8Array;
   dependencies: string[];
-  exports: Record<string, Function>;
+  exports: Record<string, (...args: unknown[]) => unknown>;
+  processId?: string;
 }
 
 export interface VMConfig {
@@ -21,46 +25,76 @@ export interface VMConfig {
 }
 
 export class InfernoVM {
-  private modules: Map<string, DisModule>;
-  private config: VMConfig;
-  private runtime: any;
+  private _modules: Map<string, DisModule>;
+  private _config: VMConfig;
+  private _runtime: VMRuntime;
 
   constructor(config: Partial<VMConfig> = {}) {
-    this.modules = new Map();
-    this.config = {
-      maxMemory: config.maxMemory || 1024 * 1024 * 512, // 512MB default
-      maxThreads: config.maxThreads || 4,
-      enableDistributed: config.enableDistributed || false,
-      securityLevel: config.securityLevel || 'strict',
+    this._modules = new Map();
+    this._config = {
+      maxMemory: config.maxMemory ?? 1024 * 1024 * 512, // 512 MB default
+      maxThreads: config.maxThreads ?? 4,
+      enableDistributed: config.enableDistributed ?? false,
+      securityLevel: config.securityLevel ?? 'strict',
     };
+    this._runtime = new VMRuntime();
   }
 
   /**
-   * Load a .dis module into the VM
+   * Load a .dis module into the VM.
+   *
+   * The bytecode is validated before loading.  Exported functions are parsed
+   * from the data segment and registered as callable wrappers that execute the
+   * bytecode starting at each function's address.
    */
   async loadModule(name: string, bytecode: Uint8Array): Promise<DisModule> {
+    BytecodeLoader.validate(bytecode);
+
+    const exportAddresses = this._parseExports(bytecode);
+    const proc = this._runtime.createProcess();
+
     const module: DisModule = {
       name,
       version: '1.0.0',
       bytecode,
       dependencies: [],
       exports: {},
+      processId: proc.id,
     };
 
-    this.modules.set(name, module);
+    for (const [exportName, address] of Object.entries(exportAddresses)) {
+      module.exports[exportName] = (..._args: unknown[]) => {
+        proc.registers.set('__startPC', address);
+
+        return this._runtime.execute(proc.id, bytecode);
+      };
+    }
+
+    this._modules.set(name, module);
+
     return module;
   }
 
   /**
-   * Execute a loaded module
+   * Execute an exported function in a loaded module.
+   * Throws if the module or entry point is not found, or if a required
+   * dependency has not yet been loaded.
    */
-  async execute(moduleName: string, entryPoint: string, args: any[] = []): Promise<any> {
-    const module = this.modules.get(moduleName);
+  async execute(moduleName: string, entryPoint: string, args: unknown[] = []): Promise<unknown> {
+    const module = this._modules.get(moduleName);
+
     if (!module) {
       throw new Error(`Module ${moduleName} not found`);
     }
 
+    for (const dep of module.dependencies) {
+      if (!this._modules.has(dep)) {
+        throw new Error(`Dependency ${dep} required by ${moduleName} is not loaded`);
+      }
+    }
+
     const fn = module.exports[entryPoint];
+
     if (!fn) {
       throw new Error(`Entry point ${entryPoint} not found in module ${moduleName}`);
     }
@@ -69,28 +103,81 @@ export class InfernoVM {
   }
 
   /**
-   * Get loaded modules
+   * Return the names of all currently loaded modules.
    */
   getModules(): string[] {
-    return Array.from(this.modules.keys());
+    return Array.from(this._modules.keys());
   }
 
   /**
-   * Unload a module
+   * Unload a module by name.  Returns true if it was found and removed.
    */
   unloadModule(name: string): boolean {
-    return this.modules.delete(name);
+    return this._modules.delete(name);
   }
 
   /**
-   * Get VM statistics
+   * Return runtime statistics including loaded module count, heap usage, and
+   * the active VM configuration.
    */
   getStats() {
+    const runtimeProcess =
+      typeof globalThis !== 'undefined' ? (globalThis as unknown as Record<string, unknown>).process : undefined;
+    const memUsage =
+      runtimeProcess !== null &&
+      runtimeProcess !== undefined &&
+      typeof (runtimeProcess as Record<string, unknown>).memoryUsage === 'function'
+        ? (runtimeProcess as { memoryUsage: () => { heapUsed: number } }).memoryUsage()
+        : { heapUsed: 0 };
+
     return {
-      loadedModules: this.modules.size,
-      memoryUsage: process.memoryUsage ? process.memoryUsage() : { heapUsed: 0 },
-      config: this.config,
+      loadedModules: this._modules.size,
+      memoryUsage: memUsage,
+      config: this._config,
     };
+  }
+
+  // ── private helpers ────────────────────────────────────────────────────────
+
+  /**
+   * Parse the export table from the data segment of a validated bytecode buffer.
+   * Returns a map of export name → absolute bytecode offset.
+   */
+  private _parseExports(bytecode: Uint8Array): Record<string, number> {
+    const result: Record<string, number> = {};
+    const HEADER_SIZE = 24;
+
+    if (bytecode.length < HEADER_SIZE + 2) {
+      return result;
+    }
+
+    const view = new DataView(bytecode.buffer, bytecode.byteOffset, bytecode.byteLength);
+    const numExports = view.getUint16(HEADER_SIZE, true);
+    let offset = HEADER_SIZE + 2;
+
+    for (let i = 0; i < numExports; i++) {
+      if (offset >= bytecode.length) {
+        break;
+      }
+
+      const nameLen = bytecode[offset++]!;
+
+      if (offset + nameLen + 2 > bytecode.length) {
+        break;
+      }
+
+      let exportName = '';
+
+      for (let j = 0; j < nameLen; j++) {
+        exportName += String.fromCharCode(bytecode[offset++]!);
+      }
+
+      const address = view.getUint16(offset, true);
+      offset += 2;
+      result[exportName] = address;
+    }
+
+    return result;
   }
 }
 
@@ -110,5 +197,6 @@ export function getGlobalVM(): InfernoVM {
   if (!globalVM) {
     globalVM = createVM();
   }
+
   return globalVM;
 }

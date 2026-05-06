@@ -1,59 +1,29 @@
 /**
  * nn.llmbol.dis.vm - Neural Network VM Deployment System
- * 
+ *
  * A comprehensive system for deploying and executing neural network models
  * with Inferno-inspired VM, GGML-like ML operations, Torch7-style architectures,
  * and distributed compute capabilities.
  */
 
 // VM Module Exports
-export { 
-  InfernoVM, 
-  createVM, 
-  getGlobalVM,
-  type DisModule,
-  type VMConfig 
-} from './vm/diy.dis';
+export { InfernoVM, createVM, getGlobalVM, type DisModule, type VMConfig } from './vm/diy.dis';
 
-export { 
-  VMRuntime, 
-  runtime,
-  type VMProcess 
-} from './vm/vm-runtime';
+export { VMRuntime, runtime, type VMProcess } from './vm/vm-runtime';
 
-export { 
-  BytecodeLoader,
-  type BytecodeHeader 
-} from './vm/bytecode-loader';
+export { BytecodeLoader, type BytecodeHeader } from './vm/bytecode-loader';
 
 // ML Module Exports
-export { 
-  MLModule, 
-  createMLModule, 
-  getGlobalMLModule,
-  type Tensor,
-  type MLModel,
-  type ModelConfig 
-} from './ml/ml.m';
+export { MLModule, createMLModule, getGlobalMLModule, type Tensor, type MLModel, type ModelConfig } from './ml/ml.m';
 
-export { 
-  TensorOps 
-} from './ml/tensor-ops';
+export { TensorOps } from './ml/tensor-ops';
 
-export { 
-  Quantization,
-  type QuantizationType,
-  type QuantizationConfig 
-} from './ml/quantization';
+export { Quantization, type QuantizationType, type QuantizationConfig } from './ml/quantization';
 
-export { 
-  InferenceEngine, 
-  createInferenceEngine,
-  type InferenceConfig 
-} from './ml/inference-engine';
+export { InferenceEngine, createInferenceEngine, type InferenceConfig } from './ml/inference-engine';
 
 // NN Module Exports
-export { 
+export {
   Sequential,
   Parallel,
   ConcatTable,
@@ -62,20 +32,12 @@ export {
   concatTable,
   type NNModule,
   type LinearConfig,
-  type ConvConfig 
+  type ConvConfig,
 } from './nn/nn.b';
 
-export { 
-  Linear,
-  ReLU,
-  Tanh,
-  Sigmoid,
-  Dropout,
-  BatchNorm,
-  Conv1d 
-} from './nn/nn-modules';
+export { Linear, ReLU, Tanh, Sigmoid, Dropout, BatchNorm, Conv1d } from './nn/nn-modules';
 
-export { 
+export {
   LayerFactory,
   linear,
   relu,
@@ -85,56 +47,42 @@ export {
   batchNorm,
   conv1d,
   type LayerType,
-  type LayerConfig 
+  type LayerConfig,
 } from './nn/layer-factory';
 
-export { 
+export {
   ModelBuilder,
   buildModel,
   createFeedforwardModel,
   createConvModel,
-  type ModelArchitecture 
+  type ModelArchitecture,
 } from './nn/model-builder';
 
 // Distributed Module Exports
-export { 
-  ComputeNode,
-  createComputeNode,
-  type NodeInfo,
-  type Task 
-} from './distributed/compute-node';
+export { ComputeNode, createComputeNode, type NodeInfo, type Task } from './distributed/compute-node';
 
-export { 
+export {
   TaskScheduler,
   createScheduler,
   createTask,
   type SchedulingStrategy,
-  type SchedulerConfig 
+  type SchedulerConfig,
 } from './distributed/task-scheduler';
 
-export { 
+export {
   Communication,
   createCommunication,
   type Message,
   type MessageType,
-  type CommunicationConfig 
+  type CommunicationConfig,
 } from './distributed/communication';
 
 // LLM Module Exports
-export { 
-  LLMManager 
-} from './llm/manager';
+export { LLMManager } from './llm/manager';
 
-export { 
-  BaseProvider,
-  getOpenAILikeModel
-} from './llm/base-provider';
+export { BaseProvider, getOpenAILikeModel } from './llm/base-provider';
 
-export { 
-  type ModelInfo,
-  type ProviderInfo,
-  type ProviderConfig 
-} from './llm/types';
+export { type ModelInfo, type ProviderInfo, type ProviderConfig } from './llm/types';
 
 export * as LLMProviders from './llm/registry';
 

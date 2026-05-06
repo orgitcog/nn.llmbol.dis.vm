@@ -7,9 +7,11 @@ import GraniteProvider from '../llm/providers/granite';
 import type { ModelInfo, ProviderConfig } from '../llm/types';
 import type { LanguageModelV1 } from 'ai';
 
-// ---------------------------------------------------------------------------
-// Minimal concrete provider for unit testing
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * Minimal concrete provider for unit testing
+ * ---------------------------------------------------------------------------
+ */
 
 class MockProvider extends BaseProvider {
   name = 'MockProvider';
@@ -81,9 +83,11 @@ class MockProviderWithDynamic extends BaseProvider {
   }
 }
 
-// ---------------------------------------------------------------------------
-// BaseProvider unit tests
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * BaseProvider unit tests
+ * ---------------------------------------------------------------------------
+ */
 
 describe('BaseProvider', () => {
   let provider: MockProvider;
@@ -175,6 +179,7 @@ describe('BaseProvider', () => {
       ];
 
       provider.storeDynamicModels(options, models);
+
       const cached = provider.getModelsFromCache(options);
 
       expect(cached).toHaveLength(1);
@@ -189,6 +194,7 @@ describe('BaseProvider', () => {
       ];
 
       provider.storeDynamicModels(options1, models);
+
       const result = provider.getModelsFromCache(options2);
 
       expect(result).toBeNull();
@@ -196,9 +202,11 @@ describe('BaseProvider', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// LLMManager unit tests
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * LLMManager unit tests
+ * ---------------------------------------------------------------------------
+ */
 
 describe('LLMManager', () => {
   // Reset the singleton between tests using a fresh instance trick
@@ -219,6 +227,7 @@ describe('LLMManager', () => {
 
     it('should expose env passed at construction', () => {
       (LLMManager as any)._instance = undefined;
+
       const m = LLMManager.getInstance({ CUSTOM_VAR: 'hello' });
       expect(m.env.CUSTOM_VAR).toBe('hello');
     });
@@ -342,6 +351,7 @@ describe('LLMManager', () => {
       }
 
       manager.registerProvider(new OverlapProvider());
+
       const models = await manager.updateModelList({});
       const sharedModels = models.filter((m) => m.name === 'shared-model' && m.provider === 'OverlapProvider');
 
@@ -418,6 +428,7 @@ describe('LLMManager', () => {
 
       // First call populates cache
       await manager.getModelListFromProvider(provider, {});
+
       // Second call should use cache
       await manager.getModelListFromProvider(provider, {});
 
@@ -431,9 +442,11 @@ describe('LLMManager', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// AzureOpenAIProvider unit tests
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * AzureOpenAIProvider unit tests
+ * ---------------------------------------------------------------------------
+ */
 
 describe('AzureOpenAIProvider', () => {
   let provider: AzureOpenAIProvider;
@@ -448,6 +461,7 @@ describe('AzureOpenAIProvider', () => {
 
   it('should expose static models', () => {
     expect(provider.staticModels.length).toBeGreaterThan(0);
+
     const names = provider.staticModels.map((m) => m.name);
     expect(names).toContain('gpt-4o');
     expect(names).toContain('gpt-4o-mini');
@@ -489,9 +503,11 @@ describe('AzureOpenAIProvider', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// VertexAIProvider unit tests
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * VertexAIProvider unit tests
+ * ---------------------------------------------------------------------------
+ */
 
 describe('VertexAIProvider', () => {
   let provider: VertexAIProvider;
@@ -506,6 +522,7 @@ describe('VertexAIProvider', () => {
 
   it('should expose static Gemini models', () => {
     expect(provider.staticModels.length).toBeGreaterThan(0);
+
     const names = provider.staticModels.map((m) => m.name);
     expect(names).toContain('gemini-1.5-pro');
     expect(names).toContain('gemini-1.5-flash');
@@ -536,9 +553,11 @@ describe('VertexAIProvider', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// GraniteProvider unit tests
-// ---------------------------------------------------------------------------
+/*
+ * ---------------------------------------------------------------------------
+ * GraniteProvider unit tests
+ * ---------------------------------------------------------------------------
+ */
 
 describe('GraniteProvider', () => {
   let provider: GraniteProvider;
@@ -553,6 +572,7 @@ describe('GraniteProvider', () => {
 
   it('should expose IBM Granite static models', () => {
     expect(provider.staticModels.length).toBeGreaterThan(0);
+
     const names = provider.staticModels.map((m) => m.name);
     expect(names).toContain('ibm/granite-3-8b-instruct');
     expect(names).toContain('ibm/granite-34b-code-instruct');

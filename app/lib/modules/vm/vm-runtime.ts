@@ -1,6 +1,6 @@
 /**
  * VM Runtime Execution Environment
- * 
+ *
  * Provides the runtime environment for executing bytecode and managing
  * VM state, memory, and process scheduling.
  */
@@ -35,6 +35,7 @@ export class VMRuntime {
     };
 
     this.processes.set(process.id, process);
+
     return process;
   }
 
@@ -43,17 +44,21 @@ export class VMRuntime {
    */
   execute(processId: string, bytecode: Uint8Array): any {
     const process = this.processes.get(processId);
+
     if (!process) {
       throw new Error(`Process ${processId} not found`);
     }
 
     process.state = 'running';
 
-    // Simple bytecode execution simulation
-    // In a real implementation, this would interpret actual bytecode
+    /*
+     * Simple bytecode execution simulation
+     * In a real implementation, this would interpret actual bytecode
+     */
     try {
       const result = this.interpretBytecode(process, bytecode);
       process.state = 'suspended';
+
       return result;
     } catch (error) {
       process.state = 'terminated';
@@ -70,15 +75,17 @@ export class VMRuntime {
    * - Function calls (CALL, RET)
    */
   private interpretBytecode(process: VMProcess, bytecode: Uint8Array): any {
-    // This is a simplified interpreter
-    // Real implementation would decode and execute actual bytecode instructions
-    
+    /*
+     * This is a simplified interpreter
+     * Real implementation would decode and execute actual bytecode instructions
+     */
+
     let pc = 0; // Program counter
     const result: any[] = [];
 
     while (pc < bytecode.length) {
       const opcode = bytecode[pc++];
-      
+
       switch (opcode) {
         case 0x00: // NOP
           break;
@@ -86,11 +93,12 @@ export class VMRuntime {
           if (pc < bytecode.length) {
             result.push(bytecode[pc++]);
           }
+
           break;
         case 0x02: // POP
           result.pop();
           break;
-        case 0xFF: // HALT
+        case 0xff: // HALT
           return result.length > 0 ? result[result.length - 1] : null;
         default:
           // Unknown opcode, continue
@@ -106,10 +114,12 @@ export class VMRuntime {
    */
   terminateProcess(processId: string): boolean {
     const process = this.processes.get(processId);
+
     if (process) {
       process.state = 'terminated';
       return this.processes.delete(processId);
     }
+
     return false;
   }
 

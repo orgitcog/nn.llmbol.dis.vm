@@ -1,6 +1,6 @@
 /**
  * Distributed Compute Node
- * 
+ *
  * Represents a compute node in a distributed system that can execute
  * tasks and communicate with other nodes
  */
@@ -73,7 +73,7 @@ export class ComputeNode {
     task.assignedTo = this.info.id;
     this.tasks.set(task.id, task);
     this.updateLoad();
-    
+
     if (this.tasks.size > 0) {
       this.info.status = 'busy';
     }
@@ -86,6 +86,7 @@ export class ComputeNode {
    */
   async executeTask(taskId: string): Promise<any> {
     const task = this.tasks.get(taskId);
+
     if (!task) {
       throw new Error(`Task ${taskId} not found`);
     }
@@ -95,7 +96,7 @@ export class ComputeNode {
       const result = await this.processTask(task);
       this.tasks.delete(taskId);
       this.updateLoad();
-      
+
       if (this.tasks.size === 0) {
         this.info.status = 'idle';
       }
@@ -112,9 +113,11 @@ export class ComputeNode {
    * Process a task based on its type
    */
   private async processTask(task: Task): Promise<any> {
-    // This is where actual task processing would happen
-    // Different task types would be handled differently
-    
+    /*
+     * This is where actual task processing would happen
+     * Different task types would be handled differently
+     */
+
     switch (task.type) {
       case 'inference':
         return this.processInference(task.payload);
@@ -165,7 +168,7 @@ export class ComputeNode {
    * Helper delay function
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -210,6 +213,7 @@ export class ComputeNode {
    */
   removeCapability(capability: string): void {
     const index = this.info.capabilities.indexOf(capability);
+
     if (index > -1) {
       this.info.capabilities.splice(index, 1);
     }
@@ -223,7 +227,7 @@ export function createComputeNode(
   id: string,
   address: string = 'localhost',
   port: number = 8080,
-  capabilities: string[] = []
+  capabilities: string[] = [],
 ): ComputeNode {
   return new ComputeNode(id, address, port, capabilities);
 }

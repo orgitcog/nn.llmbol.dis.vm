@@ -1,28 +1,13 @@
 /**
  * Layer Factory
- * 
+ *
  * Factory for creating neural network layers with various configurations
  */
 
 import type { NNModule, LinearConfig, ConvConfig } from './nn.b';
-import { 
-  Linear, 
-  ReLU, 
-  Tanh, 
-  Sigmoid, 
-  Dropout, 
-  BatchNorm, 
-  Conv1d 
-} from './nn-modules';
+import { Linear, ReLU, Tanh, Sigmoid, Dropout, BatchNorm, Conv1d } from './nn-modules';
 
-export type LayerType = 
-  | 'linear'
-  | 'relu'
-  | 'tanh'
-  | 'sigmoid'
-  | 'dropout'
-  | 'batchnorm'
-  | 'conv1d';
+export type LayerType = 'linear' | 'relu' | 'tanh' | 'sigmoid' | 'dropout' | 'batchnorm' | 'conv1d';
 
 export interface LayerConfig {
   type: LayerType;
@@ -35,7 +20,7 @@ export class LayerFactory {
    */
   static create(config: LayerConfig): NNModule {
     const availableTypes = ['linear', 'relu', 'tanh', 'sigmoid', 'dropout', 'batchnorm', 'conv1d'];
-    
+
     switch (config.type) {
       case 'linear':
         return this.createLinear(config.params);
@@ -52,9 +37,7 @@ export class LayerFactory {
       case 'conv1d':
         return this.createConv1d(config.params);
       default:
-        throw new Error(
-          `Unknown layer type: ${config.type}. Available types: ${availableTypes.join(', ')}`
-        );
+        throw new Error(`Unknown layer type: ${config.type}. Available types: ${availableTypes.join(', ')}`);
     }
   }
 
@@ -88,7 +71,7 @@ export class LayerFactory {
    * Create multiple layers from configurations
    */
   static createMany(configs: LayerConfig[]): NNModule[] {
-    return configs.map(config => this.create(config));
+    return configs.map((config) => this.create(config));
   }
 
   /**
@@ -99,36 +82,36 @@ export class LayerFactory {
     hiddenSizes: number[],
     outputSize: number,
     activation: LayerType = 'relu',
-    dropout: number = 0
+    dropout: number = 0,
   ): LayerConfig[] {
     const configs: LayerConfig[] = [];
-    
+
     let prevSize = inputSize;
-    
+
     for (const hiddenSize of hiddenSizes) {
       // Linear layer
       configs.push({
         type: 'linear',
         params: { inputSize: prevSize, outputSize: hiddenSize },
       });
-      
+
       // Activation
       configs.push({ type: activation });
-      
+
       // Dropout
       if (dropout > 0) {
         configs.push({ type: 'dropout', params: { p: dropout } });
       }
-      
+
       prevSize = hiddenSize;
     }
-    
+
     // Output layer
     configs.push({
       type: 'linear',
       params: { inputSize: prevSize, outputSize },
     });
-    
+
     return configs;
   }
 
@@ -139,7 +122,7 @@ export class LayerFactory {
     inputChannels: number,
     channels: number[],
     kernelSizes: number[],
-    activation: LayerType = 'relu'
+    activation: LayerType = 'relu',
   ): LayerConfig[] {
     if (channels.length !== kernelSizes.length) {
       throw new Error('channels and kernelSizes must have same length');
@@ -147,7 +130,7 @@ export class LayerFactory {
 
     const configs: LayerConfig[] = [];
     let prevChannels = inputChannels;
-    
+
     for (let i = 0; i < channels.length; i++) {
       // Conv layer
       configs.push({
@@ -160,29 +143,26 @@ export class LayerFactory {
           padding: 0,
         },
       });
-      
+
       // Batch norm
       configs.push({
         type: 'batchnorm',
         params: { numFeatures: channels[i] },
       });
-      
+
       // Activation
       configs.push({ type: activation });
-      
+
       prevChannels = channels[i];
     }
-    
+
     return configs;
   }
 
   /**
    * Create a residual block configuration
    */
-  static createResidualBlock(
-    size: number,
-    activation: LayerType = 'relu'
-  ): LayerConfig[] {
+  static createResidualBlock(size: number, activation: LayerType = 'relu'): LayerConfig[] {
     return [
       { type: 'linear', params: { inputSize: size, outputSize: size } },
       { type: activation },
@@ -228,7 +208,7 @@ export function conv1d(
   outChannels: number,
   kernelSize: number,
   stride: number = 1,
-  padding: number = 0
+  padding: number = 0,
 ): NNModule {
   return LayerFactory.create({
     type: 'conv1d',

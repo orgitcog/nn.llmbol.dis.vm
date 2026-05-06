@@ -1,6 +1,6 @@
 /**
  * Bytecode Loader and Validator
- * 
+ *
  * Handles loading, validation, and verification of .dis bytecode modules
  */
 
@@ -21,7 +21,7 @@ export class BytecodeLoader {
   static load(buffer: ArrayBuffer): Uint8Array {
     const view = new DataView(buffer);
     const header = this.parseHeader(view);
-    
+
     if (!this.validateHeader(header)) {
       throw new Error('Invalid bytecode header');
     }
@@ -49,7 +49,7 @@ export class BytecodeLoader {
     if (header.magic !== this.MAGIC_NUMBER) {
       return false;
     }
-    
+
     if (header.version > 1) {
       return false;
     }
@@ -64,23 +64,24 @@ export class BytecodeLoader {
     const headerSize = 20;
     const codeSize = code.length;
     const totalSize = headerSize + codeSize;
-    
+
     const buffer = new ArrayBuffer(totalSize);
     const view = new DataView(buffer);
-    
+
     // Write header
     view.setUint32(0, this.MAGIC_NUMBER, true);
     view.setUint32(4, 1, true); // version
     view.setUint32(8, headerSize, true); // entry point
     view.setUint32(12, 0, true); // data size
     view.setUint32(16, codeSize, true); // code size
-    
+
     // Write code
     const array = new Uint8Array(buffer);
+
     for (let i = 0; i < code.length; i++) {
       array[headerSize + i] = code[i];
     }
-    
+
     return array;
   }
 
@@ -94,7 +95,7 @@ export class BytecodeLoader {
 
     const view = new DataView(bytecode.buffer);
     const header = this.parseHeader(view);
-    
+
     return this.validateHeader(header);
   }
 
@@ -107,6 +108,7 @@ export class BytecodeLoader {
     }
 
     const view = new DataView(bytecode.buffer);
+
     return this.parseHeader(view);
   }
 }

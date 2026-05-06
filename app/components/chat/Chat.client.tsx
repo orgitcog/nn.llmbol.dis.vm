@@ -371,6 +371,7 @@ export const ChatImpl = memo(
           }
 
           const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+
           return `<document name="${file.name}">\n\`\`\`${ext}\n${content}\n\`\`\`\n</document>`;
         })
         .filter(Boolean);

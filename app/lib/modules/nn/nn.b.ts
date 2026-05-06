@@ -1,6 +1,6 @@
 /**
  * Build-a-Bear Neural Network Architecture
- * 
+ *
  * Torch7-inspired modular neural network builder that allows
  * dynamic composition of neural network layers
  */
@@ -52,9 +52,11 @@ export class Sequential implements NNModule {
    */
   forward(input: Tensor): Tensor {
     let output = input;
+
     for (const module of this.modules) {
       output = module.forward(output);
     }
+
     return output;
   }
 
@@ -63,11 +65,13 @@ export class Sequential implements NNModule {
    */
   backward(gradOutput: Tensor): Tensor {
     let grad = gradOutput;
+
     for (let i = this.modules.length - 1; i >= 0; i--) {
       if (this.modules[i].backward) {
         grad = this.modules[i].backward!(grad);
       }
     }
+
     return grad;
   }
 
@@ -76,11 +80,13 @@ export class Sequential implements NNModule {
    */
   parameters(): Tensor[] {
     const params: Tensor[] = [];
+
     for (const module of this.modules) {
       if (module.parameters) {
         params.push(...module.parameters());
       }
     }
+
     return params;
   }
 
@@ -127,7 +133,7 @@ export class Parallel implements NNModule {
    */
   forward(input: Tensor): Tensor {
     const outputs: Tensor[] = [];
-    
+
     for (const module of this.modules) {
       outputs.push(module.forward(input));
     }
@@ -157,6 +163,7 @@ export class Parallel implements NNModule {
     };
 
     let offset = 0;
+
     for (const tensor of tensors) {
       (result.data as Float32Array).set(tensor.data as Float32Array, offset);
       offset += tensor.data.length;
@@ -167,11 +174,13 @@ export class Parallel implements NNModule {
 
   parameters(): Tensor[] {
     const params: Tensor[] = [];
+
     for (const module of this.modules) {
       if (module.parameters) {
         params.push(...module.parameters());
       }
     }
+
     return params;
   }
 }
@@ -200,7 +209,7 @@ export class ConcatTable implements NNModule {
    */
   forward(input: Tensor): Tensor {
     const outputs: Tensor[] = [];
-    
+
     for (const module of this.modules) {
       outputs.push(module.forward(input));
     }
@@ -214,6 +223,7 @@ export class ConcatTable implements NNModule {
     };
 
     let offset = 0;
+
     for (const output of outputs) {
       (result.data as Float32Array).set(output.data as Float32Array, offset);
       offset += output.data.length;
@@ -224,11 +234,13 @@ export class ConcatTable implements NNModule {
 
   parameters(): Tensor[] {
     const params: Tensor[] = [];
+
     for (const module of this.modules) {
       if (module.parameters) {
         params.push(...module.parameters());
       }
     }
+
     return params;
   }
 }

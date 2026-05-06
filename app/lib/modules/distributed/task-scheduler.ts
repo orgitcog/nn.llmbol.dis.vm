@@ -1,6 +1,6 @@
 /**
  * Task Scheduler
- * 
+ *
  * Manages task distribution across compute nodes with load balancing
  * and fault tolerance
  */
@@ -55,6 +55,7 @@ export class TaskScheduler {
   submitTask(task: Task): string {
     this.taskQueue.push(task);
     this.scheduleNext();
+
     return task.id;
   }
 
@@ -66,7 +67,8 @@ export class TaskScheduler {
       this.taskQueue.push(task);
     }
     this.scheduleNext();
-    return tasks.map(t => t.id);
+
+    return tasks.map((t) => t.id);
   }
 
   /**
@@ -82,12 +84,15 @@ export class TaskScheduler {
 
     // Try to schedule tasks
     const tasksToSchedule = [...this.taskQueue];
+
     for (const task of tasksToSchedule) {
       const node = this.selectNode(task);
+
       if (node) {
         if (node.assignTask(task)) {
           // Remove from queue
           const index = this.taskQueue.indexOf(task);
+
           if (index > -1) {
             this.taskQueue.splice(index, 1);
           }
@@ -103,9 +108,7 @@ export class TaskScheduler {
    * Select a node for task execution based on strategy
    */
   private selectNode(task: Task): ComputeNode | null {
-    const availableNodes = Array.from(this.nodes.values()).filter(node => 
-      node.canAcceptTask()
-    );
+    const availableNodes = Array.from(this.nodes.values()).filter((node) => node.canAcceptTask());
 
     if (availableNodes.length === 0) {
       return null;
@@ -131,6 +134,7 @@ export class TaskScheduler {
   private selectRoundRobin(nodes: ComputeNode[]): ComputeNode {
     const node = nodes[this.nextNodeIndex % nodes.length];
     this.nextNodeIndex++;
+
     return node;
   }
 
@@ -138,9 +142,7 @@ export class TaskScheduler {
    * Select least loaded node
    */
   private selectLeastLoaded(nodes: ComputeNode[]): ComputeNode {
-    return nodes.reduce((least, current) => 
-      current.getLoad() < least.getLoad() ? current : least
-    );
+    return nodes.reduce((least, current) => (current.getLoad() < least.getLoad() ? current : least));
   }
 
   /**
@@ -156,9 +158,7 @@ export class TaskScheduler {
    */
   private selectByCapability(nodes: ComputeNode[], task: Task): ComputeNode | null {
     // Filter nodes that have required capability
-    const capableNodes = nodes.filter(node => 
-      node.hasCapability(task.type)
-    );
+    const capableNodes = nodes.filter((node) => node.hasCapability(task.type));
 
     if (capableNodes.length === 0) {
       // Fallback to any available node
@@ -174,18 +174,15 @@ export class TaskScheduler {
    */
   private async executeTask(node: ComputeNode, task: Task): Promise<void> {
     try {
-      const result = await Promise.race([
-        node.executeTask(task.id),
-        this.timeout(this.config.timeout),
-      ]);
+      const result = await Promise.race([node.executeTask(task.id), this.timeout(this.config.timeout)]);
 
       this.taskResults.set(task.id, result);
-      
+
       // Schedule next task
       this.scheduleNext();
     } catch (error) {
       console.error(`Task ${task.id} failed:`, error);
-      
+
       // Re-queue task if retries remain
       if (task.priority > -this.config.maxRetries) {
         task.priority--;
@@ -201,9 +198,7 @@ export class TaskScheduler {
    * Timeout helper
    */
   private timeout(ms: number): Promise<never> {
-    return new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Task timeout')), ms)
-    );
+    return new Promise((_, reject) => setTimeout(() => reject(new Error('Task timeout')), ms));
   }
 
   /**
@@ -224,7 +219,7 @@ export class TaskScheduler {
    * Get scheduler statistics
    */
   getStats() {
-    const nodeStats = Array.from(this.nodes.values()).map(node => {
+    const nodeStats = Array.from(this.nodes.values()).map((node) => {
       const info = node.getInfo();
       return {
         id: info.id,
@@ -247,7 +242,7 @@ export class TaskScheduler {
    * Get all nodes
    */
   getNodes(): NodeInfo[] {
-    return Array.from(this.nodes.values()).map(node => node.getInfo());
+    return Array.from(this.nodes.values()).map((node) => node.getInfo());
   }
 
   /**
@@ -268,12 +263,7 @@ export function createScheduler(config?: Partial<SchedulerConfig>): TaskSchedule
 /**
  * Create a task
  */
-export function createTask(
-  id: string,
-  type: string,
-  payload: any,
-  priority: number = 0
-): Task {
+export function createTask(id: string, type: string, payload: any, priority: number = 0): Task {
   return {
     id,
     type,

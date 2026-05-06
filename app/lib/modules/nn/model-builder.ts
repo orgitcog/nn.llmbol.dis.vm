@@ -1,6 +1,6 @@
 /**
  * Model Builder
- * 
+ *
  * High-level API for building neural network models dynamically
  */
 
@@ -37,6 +37,7 @@ export class ModelBuilder {
     const layer = LayerFactory.create(config);
     this.model.add(layer);
     this.architecture.layers.push(config);
+
     return this;
   }
 
@@ -101,13 +102,7 @@ export class ModelBuilder {
   /**
    * Add 1D Convolution
    */
-  conv1d(
-    inChannels: number,
-    outChannels: number,
-    kernelSize: number,
-    stride: number = 1,
-    padding: number = 0
-  ): this {
+  conv1d(inChannels: number, outChannels: number, kernelSize: number, stride: number = 1, padding: number = 0): this {
     return this.addLayer({
       type: 'conv1d',
       params: { inChannels, outChannels, kernelSize, stride, padding },
@@ -122,15 +117,9 @@ export class ModelBuilder {
     hiddenSizes: number[],
     outputSize: number,
     activation: 'relu' | 'tanh' | 'sigmoid' = 'relu',
-    dropout: number = 0
+    dropout: number = 0,
   ): this {
-    const configs = LayerFactory.createFeedforward(
-      inputSize,
-      hiddenSizes,
-      outputSize,
-      activation,
-      dropout
-    );
+    const configs = LayerFactory.createFeedforward(inputSize, hiddenSizes, outputSize, activation, dropout);
     return this.addLayers(configs);
   }
 
@@ -141,14 +130,9 @@ export class ModelBuilder {
     inputChannels: number,
     channels: number[],
     kernelSizes: number[],
-    activation: 'relu' | 'tanh' | 'sigmoid' = 'relu'
+    activation: 'relu' | 'tanh' | 'sigmoid' = 'relu',
   ): this {
-    const configs = LayerFactory.createConvNet(
-      inputChannels,
-      channels,
-      kernelSizes,
-      activation
-    );
+    const configs = LayerFactory.createConvNet(inputChannels, channels, kernelSizes, activation);
     return this.addLayers(configs);
   }
 
@@ -189,20 +173,20 @@ export class ModelBuilder {
     lines.push('='.repeat(60));
     lines.push('Layer (type)'.padEnd(30) + 'Output Shape');
     lines.push('='.repeat(60));
-    
+
     for (let i = 0; i < this.architecture.layers.length; i++) {
       const layer = this.architecture.layers[i];
       const layerName = `${layer.type}_${i}`;
       lines.push(layerName.padEnd(30) + 'Dynamic');
     }
-    
+
     lines.push('='.repeat(60));
-    
+
     const params = this.parameters();
     const totalParams = params.reduce((sum, p) => sum + p.data.length, 0);
     lines.push(`Total parameters: ${totalParams.toLocaleString()}`);
     lines.push('='.repeat(60));
-    
+
     return lines.join('\n');
   }
 
@@ -221,6 +205,7 @@ export class ModelBuilder {
     const builder = new ModelBuilder(arch.name, arch.inputShape);
     builder.addLayers(arch.layers);
     builder.architecture.outputShape = arch.outputShape;
+
     return builder;
   }
 }
@@ -241,7 +226,7 @@ export function createFeedforwardModel(
   hiddenSizes: number[],
   outputSize: number,
   activation: 'relu' | 'tanh' | 'sigmoid' = 'relu',
-  dropout: number = 0
+  dropout: number = 0,
 ): Sequential {
   return new ModelBuilder(name, [inputSize])
     .feedforward(inputSize, hiddenSizes, outputSize, activation, dropout)
@@ -256,9 +241,7 @@ export function createConvModel(
   inputChannels: number,
   channels: number[],
   kernelSizes: number[],
-  activation: 'relu' | 'tanh' | 'sigmoid' = 'relu'
+  activation: 'relu' | 'tanh' | 'sigmoid' = 'relu',
 ): Sequential {
-  return new ModelBuilder(name, [inputChannels])
-    .convBlock(inputChannels, channels, kernelSizes, activation)
-    .build();
+  return new ModelBuilder(name, [inputChannels]).convBlock(inputChannels, channels, kernelSizes, activation).build();
 }

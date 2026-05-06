@@ -1,6 +1,6 @@
 /**
  * Inter-Node Communication
- * 
+ *
  * Handles message passing and communication between distributed compute nodes
  */
 
@@ -84,7 +84,7 @@ export class Communication {
    */
   async broadcast(payload: any): Promise<void> {
     const peerIds = Array.from(this.peers.keys());
-    
+
     const message: Message = {
       id: this.generateMessageId(),
       type: 'broadcast',
@@ -109,6 +109,7 @@ export class Communication {
    */
   async handleMessage(message: Message): Promise<void> {
     const handler = this.messageHandlers.get(message.type);
+
     if (handler) {
       handler(message);
     }
@@ -141,6 +142,7 @@ export class Communication {
    */
   private updatePeer(peerId: string): void {
     const peer = this.peers.get(peerId);
+
     if (peer) {
       peer.lastSeen = Date.now();
       peer.status = 'online';
@@ -164,7 +166,7 @@ export class Communication {
    */
   private async sendHeartbeat(): Promise<void> {
     const peerIds = Array.from(this.peers.keys());
-    
+
     if (peerIds.length > 0) {
       await this.send(peerIds, { status: 'alive' }, 'heartbeat');
     }
@@ -188,12 +190,14 @@ export class Communication {
    * Transmit message (simulation)
    */
   private async transmit(message: Message): Promise<void> {
-    // In a real implementation, this would use actual network transport
-    // (WebSockets, HTTP, gRPC, etc.)
-    
+    /*
+     * In a real implementation, this would use actual network transport
+     * (WebSockets, HTTP, gRPC, etc.)
+     */
+
     // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, Math.random() * 10));
-    
+    await new Promise((resolve) => setTimeout(resolve, Math.random() * 10));
+
     // Remove from pending
     this.pendingMessages.delete(message.id);
   }
@@ -251,9 +255,6 @@ export class Communication {
 /**
  * Create a new communication instance
  */
-export function createCommunication(
-  nodeId: string,
-  config?: Partial<CommunicationConfig>
-): Communication {
+export function createCommunication(nodeId: string, config?: Partial<CommunicationConfig>): Communication {
   return new Communication(nodeId, config);
 }

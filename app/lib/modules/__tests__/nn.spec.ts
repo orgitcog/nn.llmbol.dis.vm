@@ -16,7 +16,7 @@ describe('Sequential', () => {
     const model = nn()
       .add(new Linear({ inputSize: 10, outputSize: 5, bias: true }))
       .add(new ReLU());
-    
+
     expect(model.size()).toBe(2);
   });
 
@@ -24,13 +24,13 @@ describe('Sequential', () => {
     const model = nn()
       .add(new Linear({ inputSize: 3, outputSize: 2, bias: true }))
       .add(new ReLU());
-    
+
     const input: Tensor = {
       shape: [1, 3],
       data: new Float32Array([1, 2, 3]),
       dtype: 'float32',
     };
-    
+
     const output = model.forward(input);
     expect(output).toBeDefined();
     expect(output.shape).toEqual([1, 2]);
@@ -41,8 +41,9 @@ describe('Sequential', () => {
       .add(new Linear({ inputSize: 3, outputSize: 2, bias: true }))
       .add(new ReLU())
       .add(new Linear({ inputSize: 2, outputSize: 1, bias: true }));
-    
+
     const params = model.parameters();
+
     // First Linear: weight + bias, Second Linear: weight + bias
     expect(params.length).toBe(4);
   });
@@ -56,7 +57,7 @@ describe('Neural Network Modules', () => {
         outputSize: 5,
         bias: true,
       });
-      
+
       expect(layer.type).toBe('Linear');
     });
 
@@ -66,13 +67,13 @@ describe('Neural Network Modules', () => {
         outputSize: 2,
         bias: true,
       });
-      
+
       const input: Tensor = {
         shape: [1, 3],
         data: new Float32Array([1, 2, 3]),
         dtype: 'float32',
       };
-      
+
       const output = layer.forward(input);
       expect(output.shape).toEqual([1, 2]);
     });
@@ -83,7 +84,7 @@ describe('Neural Network Modules', () => {
         outputSize: 2,
         bias: true,
       });
-      
+
       const params = layer.parameters!();
       expect(params.length).toBe(2); // weight and bias
     });
@@ -97,10 +98,10 @@ describe('Neural Network Modules', () => {
         data: new Float32Array([-2, -1, 0, 1]),
         dtype: 'float32',
       };
-      
+
       const output = layer.forward(input);
       const expected = [0, 0, 0, 1];
-      
+
       expect(Array.from(output.data as Float32Array)).toEqual(expected);
     });
   });
@@ -118,7 +119,7 @@ describe('Neural Network Modules', () => {
         data: new Float32Array([1, 2, 3, 4]),
         dtype: 'float32',
       };
-      
+
       const output = layer.forward(input);
       expect(output.shape).toEqual(input.shape);
     });
@@ -131,7 +132,7 @@ describe('LayerFactory', () => {
       type: 'linear',
       params: { inputSize: 10, outputSize: 5 },
     });
-    
+
     expect(layer.type).toBe('Linear');
   });
 
@@ -139,7 +140,7 @@ describe('LayerFactory', () => {
     const relu = LayerFactory.create({ type: 'relu' });
     const tanh = LayerFactory.create({ type: 'tanh' });
     const sigmoid = LayerFactory.create({ type: 'sigmoid' });
-    
+
     expect(relu.type).toBe('ReLU');
     expect(tanh.type).toBe('Tanh');
     expect(sigmoid.type).toBe('Sigmoid');
@@ -147,13 +148,13 @@ describe('LayerFactory', () => {
 
   it('should create feedforward network config', () => {
     const config = LayerFactory.createFeedforward(
-      10,     // input size
+      10, // input size
       [64, 32], // hidden sizes
-      5,      // output size
+      5, // output size
       'relu',
-      0.2     // dropout
+      0.2, // dropout
     );
-    
+
     // Should have: linear + relu + dropout + linear + relu + dropout + linear
     expect(config.length).toBe(7);
   });
@@ -161,7 +162,7 @@ describe('LayerFactory', () => {
   it('should use helper functions', () => {
     const l = linear(10, 5);
     const r = relu();
-    
+
     expect(l.type).toBe('Linear');
     expect(r.type).toBe('ReLU');
   });
@@ -169,12 +170,8 @@ describe('LayerFactory', () => {
 
 describe('ModelBuilder', () => {
   it('should build a simple model', () => {
-    const model = buildModel('test-model', [10])
-      .linear(10, 5)
-      .relu()
-      .linear(5, 2)
-      .build();
-    
+    const model = buildModel('test-model', [10]).linear(10, 5).relu().linear(5, 2).build();
+
     expect(model).toBeInstanceOf(Sequential);
     expect(model.size()).toBe(3);
   });
@@ -187,52 +184,39 @@ describe('ModelBuilder', () => {
       .linear(64, 32)
       .relu()
       .linear(32, 10);
-    
+
     const model = builder.build();
     expect(model.size()).toBe(6);
   });
 
   it('should build feedforward network', () => {
-    const builder = buildModel('feedforward', [10])
-      .feedforward(10, [64, 32], 5, 'relu', 0.2);
-    
+    const builder = buildModel('feedforward', [10]).feedforward(10, [64, 32], 5, 'relu', 0.2);
+
     const model = builder.build();
     expect(model.size()).toBeGreaterThan(0);
   });
 
   it('should provide model summary', () => {
-    const builder = buildModel('test-model', [10])
-      .linear(10, 5)
-      .relu()
-      .linear(5, 2);
-    
+    const builder = buildModel('test-model', [10]).linear(10, 5).relu().linear(5, 2);
+
     const summary = builder.summary();
     expect(summary).toContain('test-model');
     expect(summary).toContain('Total parameters');
   });
 
   it('should serialize to JSON', () => {
-    const builder = buildModel('test-model', [10])
-      .linear(10, 5)
-      .relu();
-    
+    const builder = buildModel('test-model', [10]).linear(10, 5).relu();
+
     const json = builder.toJSON();
     const parsed = JSON.parse(json);
-    
+
     expect(parsed.name).toBe('test-model');
     expect(parsed.layers.length).toBe(2);
   });
 
   it('should create feedforward model helper', () => {
-    const model = createFeedforwardModel(
-      'simple-ff',
-      10,
-      [64, 32],
-      5,
-      'relu',
-      0.2
-    );
-    
+    const model = createFeedforwardModel('simple-ff', 10, [64, 32], 5, 'relu', 0.2);
+
     expect(model).toBeInstanceOf(Sequential);
   });
 });
@@ -247,7 +231,7 @@ describe('Parallel', () => {
     const parallel = new Parallel(0, 0)
       .add(new Linear({ inputSize: 10, outputSize: 5, bias: true }))
       .add(new Linear({ inputSize: 10, outputSize: 3, bias: true }));
-    
+
     expect(parallel).toBeDefined();
   });
 });

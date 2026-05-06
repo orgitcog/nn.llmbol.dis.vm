@@ -18,7 +18,7 @@ describe('InfernoVM', () => {
         enableDistributed: true,
         securityLevel: 'relaxed',
       });
-      
+
       const stats = vm.getStats();
       expect(stats.config.maxMemory).toBe(1024 * 1024);
       expect(stats.config.maxThreads).toBe(2);
@@ -43,7 +43,7 @@ describe('InfernoVM', () => {
     it('should load a module', async () => {
       const bytecode = new Uint8Array([0x01, 0x02, 0x03]);
       const module = await vm.loadModule('test-module', bytecode);
-      
+
       expect(module.name).toBe('test-module');
       expect(module.bytecode).toEqual(bytecode);
       expect(module.version).toBe('1.0.0');
@@ -53,7 +53,7 @@ describe('InfernoVM', () => {
       const bytecode = new Uint8Array([0x01, 0x02, 0x03]);
       await vm.loadModule('module1', bytecode);
       await vm.loadModule('module2', bytecode);
-      
+
       const modules = vm.getModules();
       expect(modules).toContain('module1');
       expect(modules).toContain('module2');
@@ -63,7 +63,7 @@ describe('InfernoVM', () => {
     it('should unload a module', async () => {
       const bytecode = new Uint8Array([0x01, 0x02, 0x03]);
       await vm.loadModule('test-module', bytecode);
-      
+
       const result = vm.unloadModule('test-module');
       expect(result).toBe(true);
       expect(vm.getModules()).not.toContain('test-module');
@@ -74,7 +74,7 @@ describe('InfernoVM', () => {
     it('should provide stats', () => {
       const vm = createVM();
       const stats = vm.getStats();
-      
+
       expect(stats).toHaveProperty('loadedModules');
       expect(stats).toHaveProperty('memoryUsage');
       expect(stats).toHaveProperty('config');
@@ -86,17 +86,17 @@ describe('InfernoVM', () => {
 describe('BytecodeLoader', () => {
   describe('Module Creation', () => {
     it('should create a simple bytecode module', () => {
-      const code = [0x00, 0x01, 0x02, 0xFF]; // NOP, PUSH, POP, HALT
+      const code = [0x00, 0x01, 0x02, 0xff]; // NOP, PUSH, POP, HALT
       const bytecode = BytecodeLoader.createModule(code);
-      
+
       expect(bytecode).toBeInstanceOf(Uint8Array);
       expect(bytecode.length).toBeGreaterThan(code.length);
     });
 
     it('should verify valid bytecode', () => {
-      const code = [0x00, 0x01, 0xFF];
+      const code = [0x00, 0x01, 0xff];
       const bytecode = BytecodeLoader.createModule(code);
-      
+
       const isValid = BytecodeLoader.verify(bytecode);
       expect(isValid).toBe(true);
     });
@@ -110,9 +110,9 @@ describe('BytecodeLoader', () => {
 
   describe('Metadata Extraction', () => {
     it('should extract bytecode metadata', () => {
-      const code = [0x00, 0x01, 0xFF];
+      const code = [0x00, 0x01, 0xff];
       const bytecode = BytecodeLoader.createModule(code);
-      
+
       const metadata = BytecodeLoader.extractMetadata(bytecode);
       expect(metadata).toHaveProperty('magic');
       expect(metadata).toHaveProperty('version');
@@ -127,7 +127,7 @@ describe('VMRuntime', () => {
   describe('Process Management', () => {
     it('should create a process', () => {
       const process = runtime.createProcess();
-      
+
       expect(process).toHaveProperty('id');
       expect(process).toHaveProperty('state');
       expect(process.state).toBe('suspended');
@@ -135,8 +135,8 @@ describe('VMRuntime', () => {
 
     it('should execute bytecode', () => {
       const process = runtime.createProcess();
-      const bytecode = new Uint8Array([0x01, 0x05, 0xFF]); // PUSH 5, HALT
-      
+      const bytecode = new Uint8Array([0x01, 0x05, 0xff]); // PUSH 5, HALT
+
       const result = runtime.execute(process.id, bytecode);
       expect(result).toBeDefined();
     });
@@ -144,14 +144,14 @@ describe('VMRuntime', () => {
     it('should terminate a process', () => {
       const process = runtime.createProcess();
       const terminated = runtime.terminateProcess(process.id);
-      
+
       expect(terminated).toBe(true);
     });
 
     it('should get process status', () => {
       const process = runtime.createProcess();
       const status = runtime.getProcessStatus(process.id);
-      
+
       expect(status).toBeDefined();
       expect(status?.id).toBe(process.id);
     });

@@ -1,6 +1,6 @@
 /**
  * Inferno-inspired VM Deployment Engine
- * 
+ *
  * This module implements a VM deployment system inspired by Inferno OS,
  * with support for bytecode execution (.dis files) and dynamic module loading.
  */
@@ -48,6 +48,7 @@ export class InfernoVM {
     };
 
     this.modules.set(name, module);
+
     return module;
   }
 
@@ -56,11 +57,13 @@ export class InfernoVM {
    */
   async execute(moduleName: string, entryPoint: string, args: any[] = []): Promise<any> {
     const module = this.modules.get(moduleName);
+
     if (!module) {
       throw new Error(`Module ${moduleName} not found`);
     }
 
     const fn = module.exports[entryPoint];
+
     if (!fn) {
       throw new Error(`Entry point ${entryPoint} not found in module ${moduleName}`);
     }
@@ -110,5 +113,6 @@ export function getGlobalVM(): InfernoVM {
   if (!globalVM) {
     globalVM = createVM();
   }
+
   return globalVM;
 }

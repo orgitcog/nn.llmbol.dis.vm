@@ -1,4 +1,71 @@
-# Additional LLM Provider Integrations: Azure OpenAI, Vertex AI, and IBM Granite
+# Document Upload for Knowledge Feature Implementation
+
+## Overview
+
+This implementation adds document upload for knowledge functionality to the nn.llmbol.dis.vm project.
+Users can now upload text-based reference documents — source files, configuration files, markdown notes,
+style guides, etc. — directly in the chat input. The content of these documents is automatically injected
+as context into the next AI message, so the model can reference them when generating code or answering
+questions.
+
+## Modified Files
+
+### 1. `app/components/chat/FilePreview.tsx`
+
+- Extended to display non-image document files with appropriate file-type icons (`i-ph:file-text`,
+  `i-ph:file-code`, `i-ph:file-js`, `i-ph:file-css`, `i-ph:file-html`, etc.)
+- Added `documentContentList` prop (parallel to `imageDataList`) so document slots are correctly
+  identified and shown in the preview strip
+- Preserved existing image thumbnail behaviour untouched
+
+### 2. `app/components/chat/BaseChat.tsx`
+
+- Added `documentContentList` and `setDocumentContentList` to `BaseChatProps`
+- Rewrote `handleFileUpload` to accept both images and a wide set of text-based document extensions
+  (`.txt`, `.md`, `.json`, `.yaml`, `.yml`, `.toml`, `.ini`, `.env`, `.csv`, plus common source-code
+  extensions) using `multiple` file selection
+- For image files the existing base64 + `imageDataList` path is used; for document files the text
+  content is read and stored in `documentContentList`
+- Updated the paste handler to keep `documentContentList` in sync when images are pasted
+- Passes the new props through to `ChatBox`
+
+### 3. `app/components/chat/ChatBox.tsx`
+
+- Added `documentContentList` and `setDocumentContentList` to the component's props interface
+- Extended the drag-and-drop handler to recognise document files and read them as text, mirroring
+  the new upload-button behaviour
+- Updated `FilePreview` usage to pass `documentContentList` and to remove the matching entry from all
+  three parallel arrays (`uploadedFiles`, `imageDataList`, `documentContentList`) on removal
+
+### 4. `app/components/chat/Chat.client.tsx`
+
+- Added `documentContentList` / `setDocumentContentList` state
+- Added `buildDocumentContext` helper: produces a `<knowledge_documents>` XML block containing each
+  document's content in a fenced code block labelled with the file extension
+- Modified `sendMessage` to prepend the document context block to `finalMessageContent` before
+  building any message text, covering all send paths (first message, template flow, modified-files
+  path, and regular append)
+- `imageDataList.filter(Boolean)` ensures only image slots (non-empty entries) are forwarded as file
+  parts to the AI SDK
+- Clears `documentContentList` alongside `uploadedFiles` and `imageDataList` after every send
+
+## Key Features
+
+1. **Multi-file selection**: the upload button now opens a picker that accepts images *and* a broad
+   set of document extensions in a single dialog
+2. **Drag-and-drop documents**: dropping text/code files onto the chat textarea now works the same
+   as using the upload button
+3. **Visual document previews**: uploaded documents appear in the preview strip with recognisable
+   file-type icons and the filename, consistent with the existing image thumbnails
+4. **Automatic context injection**: document contents are wrapped in `<knowledge_documents>` /
+   `<document>` tags and prepended to the user message so every LLM provider receives them as
+   plain text — no provider-specific attachment support required
+5. **Per-message scope**: documents are cleared after each send, preventing unintended repetition
+   in subsequent messages
+
+---
+
+
 
 ## Overview
 

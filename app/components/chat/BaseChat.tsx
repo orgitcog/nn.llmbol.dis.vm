@@ -64,6 +64,8 @@ interface BaseChatProps {
   setUploadedFiles?: (files: File[]) => void;
   imageDataList?: string[];
   setImageDataList?: (dataList: string[]) => void;
+  documentContentList?: string[];
+  setDocumentContentList?: (contentList: string[]) => void;
   actionAlert?: ActionAlert;
   clearAlert?: () => void;
   supabaseAlert?: SupabaseAlert;
@@ -110,6 +112,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       setUploadedFiles,
       imageDataList = [],
       setImageDataList,
+      documentContentList = [],
+      setDocumentContentList,
       messages,
       actionAlert,
       clearAlert,
@@ -287,24 +291,35 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       }
     };
 
+    const DOCUMENT_EXTENSIONS =
+      '.txt,.md,.markdown,.json,.yaml,.yml,.toml,.ini,.env,.csv,.ts,.tsx,.js,.jsx,.py,.css,.html,.xml,.sh,.bash,.zsh,.rs,.go,.java,.cpp,.c,.h,.rb,.php,.swift,.kt,.r,.sql';
+
+    const readFile = (file: File): Promise<{ file: File; imageData: string; docContent: string }> =>
+      new Promise((resolve) => {
+        const reader = new FileReader();
+
+        if (file.type.startsWith('image/')) {
+          reader.onload = (ev) => resolve({ file, imageData: ev.target?.result as string, docContent: '' });
+          reader.readAsDataURL(file);
+        } else {
+          reader.onload = (ev) => resolve({ file, imageData: '', docContent: ev.target?.result as string });
+          reader.readAsText(file);
+        }
+      });
+
     const handleFileUpload = () => {
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = 'image/*';
+      input.accept = `image/*,${DOCUMENT_EXTENSIONS}`;
+      input.multiple = true;
 
       input.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
+        const selectedFiles = Array.from((e.target as HTMLInputElement).files ?? []);
+        const results = await Promise.all(selectedFiles.map(readFile));
 
-        if (file) {
-          const reader = new FileReader();
-
-          reader.onload = (e) => {
-            const base64Image = e.target?.result as string;
-            setUploadedFiles?.([...uploadedFiles, file]);
-            setImageDataList?.([...imageDataList, base64Image]);
-          };
-          reader.readAsDataURL(file);
-        }
+        setUploadedFiles?.([...uploadedFiles, ...results.map((r) => r.file)]);
+        setImageDataList?.([...imageDataList, ...results.map((r) => r.imageData)]);
+        setDocumentContentList?.([...documentContentList, ...results.map((r) => r.docContent)]);
       };
 
       input.click();
@@ -330,6 +345,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
               const base64Image = e.target?.result as string;
               setUploadedFiles?.([...uploadedFiles, file]);
               setImageDataList?.([...imageDataList, base64Image]);
+              setDocumentContentList?.([...documentContentList, '']);
             };
             reader.readAsDataURL(file);
           }
@@ -440,6 +456,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   setUploadedFiles={setUploadedFiles}
                   imageDataList={imageDataList}
                   setImageDataList={setImageDataList}
+                  documentContentList={documentContentList}
+                  setDocumentContentList={setDocumentContentList}
                   textareaRef={textareaRef}
                   input={input}
                   handleInputChange={handleInputChange}

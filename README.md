@@ -45,6 +45,7 @@ project, please check the [project management guide](./PROJECT.md) to get starte
 
 ### ✅ Completed Features
 - **19+ AI Provider Integrations** - OpenAI, Anthropic, Google, Groq, xAI, DeepSeek, Mistral, Cohere, Together, Perplexity, HuggingFace, Ollama, LM Studio, OpenRouter, Moonshot, Hyperbolic, GitHub Models, Amazon Bedrock, OpenAI-like
+- **Additional Provider Integrations** - Azure OpenAI, Vertex AI, IBM Granite
 - **Electron Desktop App** - Native desktop experience with full functionality
 - **Advanced Deployment Options** - Netlify, Vercel, and GitHub Pages deployment
 - **Supabase Integration** - Database management and query capabilities
@@ -58,6 +59,7 @@ project, please check the [project management guide](./PROJECT.md) to get starte
 - **Voice Prompting** - Audio input for prompts
 - **Bulk Chat Operations** - Delete multiple chats at once
 - **Project Snapshot Restoration** - Restore projects from snapshots on reload
+- **Document Upload for Knowledge** - Upload reference documents and style guides as AI context
 
 ### 🔄 In Progress / Planned
 - **File Locking & Diff Improvements** - Enhanced conflict prevention
@@ -65,8 +67,6 @@ project, please check the [project management guide](./PROJECT.md) to get starte
 - **LLM Prompt Optimization** - Better performance for smaller models
 - **Project Planning Documentation** - LLM-generated project plans in markdown
 - **VSCode Integration** - Git-like confirmations and workflows
-- **Document Upload for Knowledge** - Reference materials and coding style guides
-- **Additional Provider Integrations** - Azure OpenAI, Vertex AI, Granite
 
 ## Features
 

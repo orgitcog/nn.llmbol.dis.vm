@@ -51,6 +51,8 @@ interface ChatBoxProps {
   setModel?: ((model: string) => void) | undefined;
   setUploadedFiles?: ((files: File[]) => void) | undefined;
   setImageDataList?: ((dataList: string[]) => void) | undefined;
+  documentContentList?: string[];
+  setDocumentContentList?: ((contentList: string[]) => void) | undefined;
   handleInputChange?: ((event: React.ChangeEvent<HTMLTextAreaElement>) => void) | undefined;
   handleStop?: (() => void) | undefined;
   enhancingPrompt?: boolean | undefined;
@@ -135,9 +137,11 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
       <FilePreview
         files={props.uploadedFiles}
         imageDataList={props.imageDataList}
+        documentContentList={props.documentContentList}
         onRemove={(index) => {
           props.setUploadedFiles?.(props.uploadedFiles.filter((_, i) => i !== index));
           props.setImageDataList?.(props.imageDataList.filter((_, i) => i !== index));
+          props.setDocumentContentList?.((props.documentContentList ?? []).filter((_, i) => i !== index));
         }}
       />
       <ClientOnly>
@@ -201,8 +205,19 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
                   const base64Image = e.target?.result as string;
                   props.setUploadedFiles?.([...props.uploadedFiles, file]);
                   props.setImageDataList?.([...props.imageDataList, base64Image]);
+                  props.setDocumentContentList?.([...(props.documentContentList ?? []), '']);
                 };
                 reader.readAsDataURL(file);
+              } else if (file.type.startsWith('text/') || file.name.match(/\.(md|markdown|json|yaml|yml|toml|ini|env|csv|ts|tsx|js|jsx|py|css|html|xml|sh|bash|zsh|rs|go|java|cpp|c|h|rb|php|swift|kt|r|sql)$/i)) {
+                const reader = new FileReader();
+
+                reader.onload = (e) => {
+                  const textContent = e.target?.result as string;
+                  props.setUploadedFiles?.([...props.uploadedFiles, file]);
+                  props.setImageDataList?.([...props.imageDataList, '']);
+                  props.setDocumentContentList?.([...(props.documentContentList ?? []), textContent]);
+                };
+                reader.readAsText(file);
               }
             });
           }}

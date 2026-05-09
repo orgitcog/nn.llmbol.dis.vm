@@ -8,6 +8,20 @@ import { Sequential } from '~/lib/modules/nn/nn.b';
 import { LayerFactory, type LayerConfig } from '~/lib/modules/nn/layer-factory';
 import type { Tensor } from '~/lib/modules/ml/ml.m';
 
+export type OptimizerType = 'sgd' | 'adam' | 'adamw';
+
+/** Optional hyper-parameters for Adam / AdamW. */
+export interface AdamOptions {
+  /** Exponential decay rate for the first moment (default 0.9). */
+  beta1?: number;
+  /** Exponential decay rate for the second moment (default 0.999). */
+  beta2?: number;
+  /** Numerical stability epsilon (default 1e-8). */
+  epsilon?: number;
+  /** Weight-decay coefficient for AdamW (default 0.01). */
+  weightDecay?: number;
+}
+
 export interface ModelArchitecture {
   name: string;
   layers: LayerConfig[];
@@ -177,15 +191,15 @@ export class ModelBuilder {
   }
 
   /**
-   * Simple SGD training loop.
+   * Training loop supporting SGD, Adam, and AdamW optimisers.
    *
    * For each epoch and each (input, target) pair:
    *   1. Forward pass through the model
    *   2. Compute loss via lossFn
-   *   3. Backward pass using MSE-style gradient (output − target)
-   *   4. Update parameters: param -= lr * grad
+   *   3. Backward pass using MSE-style gradient (output − target) / n
+   *   4. Parameter update according to the chosen optimiser
    *
-   * @returns Array of average loss values, one per epoch
+   * @returns Array of average loss values, one per epoch.
    */
   train(
     inputs: Tensor[],
@@ -193,7 +207,23 @@ export class ModelBuilder {
     lossFn: (output: Tensor, target: Tensor) => Tensor,
     lr: number = 0.01,
     epochs: number = 1,
+    optimizer: OptimizerType = 'sgd',
+    adamOptions: AdamOptions = {},
   ): number[] {
+    const beta1 = adamOptions.beta1 ?? 0.9;
+    const beta2 = adamOptions.beta2 ?? 0.999;
+    const epsilon = adamOptions.epsilon ?? 1e-8;
+    const weightDecay = adamOptions.weightDecay ?? 0.01;
+
+    /*
+     * Adam / AdamW moment accumulators.
+     * Indexed as moments[paramIndex] = { m: Float32Array, v: Float32Array }.
+     * Allocated lazily on the first pass so we know each parameter's size.
+     */
+    type MomentPair = { m: Float32Array; v: Float32Array };
+    const moments: MomentPair[] = [];
+    let adamStep = 0;
+
     const losses: number[] = [];
 
     for (let epoch = 0; epoch < epochs; epoch++) {
@@ -220,21 +250,77 @@ export class ModelBuilder {
         // Backward pass
         this._model.backward(grad);
 
-        // Parameter update — iterate through modules that expose gradients
-        for (const mod of this._model.getModules()) {
-          if (!mod.parameters || !mod.gradients) {
-            continue;
+        if (optimizer === 'sgd') {
+          // ── SGD ─────────────────────────────────────────────────────────
+          for (const mod of this._model.getModules()) {
+            if (!mod.parameters || !mod.gradients) {
+              continue;
+            }
+
+            const params = mod.parameters();
+            const grads = mod.gradients();
+
+            for (let p = 0; p < params.length && p < grads.length; p++) {
+              const pData = params[p].data as Float32Array;
+              const gData = grads[p].data as Float32Array;
+
+              for (let k = 0; k < pData.length; k++) {
+                pData[k] -= lr * gData[k];
+              }
+            }
           }
+        } else {
+          // ── Adam / AdamW ─────────────────────────────────────────────────
+          adamStep++;
 
-          const params = mod.parameters();
-          const grads = mod.gradients();
+          // Bias-correction denominators
+          const bc1 = 1 - Math.pow(beta1, adamStep);
+          const bc2 = 1 - Math.pow(beta2, adamStep);
 
-          for (let p = 0; p < params.length && p < grads.length; p++) {
-            const pData = params[p].data as Float32Array;
-            const gData = grads[p].data as Float32Array;
+          let paramIdx = 0;
 
-            for (let k = 0; k < pData.length; k++) {
-              pData[k] -= lr * gData[k];
+          for (const mod of this._model.getModules()) {
+            if (!mod.parameters || !mod.gradients) {
+              continue;
+            }
+
+            const params = mod.parameters();
+            const grads = mod.gradients();
+
+            for (let p = 0; p < params.length && p < grads.length; p++) {
+              const pData = params[p].data as Float32Array;
+              const gData = grads[p].data as Float32Array;
+
+              // Lazy initialisation of moment buffers
+              if (!moments[paramIdx]) {
+                moments[paramIdx] = {
+                  m: new Float32Array(pData.length),
+                  v: new Float32Array(pData.length),
+                };
+              }
+
+              const { m, v } = moments[paramIdx];
+
+              for (let k = 0; k < pData.length; k++) {
+                const g = gData[k];
+
+                // Update biased first and second moment estimates
+                m[k] = beta1 * m[k] + (1 - beta1) * g;
+                v[k] = beta2 * v[k] + (1 - beta2) * g * g;
+
+                // Compute bias-corrected estimates
+                const mHat = m[k] / bc1;
+                const vHat = v[k] / bc2;
+
+                if (optimizer === 'adamw') {
+                  // AdamW: apply decoupled weight decay before the gradient step
+                  pData[k] *= 1 - lr * weightDecay;
+                }
+
+                pData[k] -= (lr * mHat) / (Math.sqrt(vHat) + epsilon);
+              }
+
+              paramIdx++;
             }
           }
         }
@@ -273,20 +359,74 @@ export class ModelBuilder {
   }
 
   /**
-   * Serialise the model architecture to JSON
+   * Serialise the model architecture to JSON (without trained weights).
+   * Use `save()` to include weight values.
    */
   toJSON(): string {
     return JSON.stringify(this._architecture, null, 2);
   }
 
   /**
-   * Reconstruct a ModelBuilder from a JSON architecture string
+   * Reconstruct a ModelBuilder from a JSON architecture string.
+   * Weights are re-initialised randomly; use `load()` to restore trained weights.
    */
   static fromJSON(json: string): ModelBuilder {
     const arch: ModelArchitecture = JSON.parse(json);
     const builder = new ModelBuilder(arch.name, arch.inputShape);
     builder.addLayers(arch.layers);
     builder._architecture.outputShape = arch.outputShape;
+
+    return builder;
+  }
+
+  /**
+   * Serialise the model architecture AND all trained parameter values to JSON.
+   * The resulting string can be restored (including weights) via `ModelBuilder.load()`.
+   */
+  save(): string {
+    const layers = this._model.getModules();
+    const weights = layers.map((layer) =>
+      layer.parameters ? layer.parameters().map((p) => Array.from(p.data as Float32Array)) : [],
+    );
+
+    return JSON.stringify({ architecture: this._architecture, weights }, null, 2);
+  }
+
+  /**
+   * Reconstruct a ModelBuilder from a JSON string produced by `save()`.
+   * Both the architecture and the trained parameter values are restored.
+   */
+  static load(json: string): ModelBuilder {
+    const parsed: { architecture: ModelArchitecture; weights?: number[][][] } = JSON.parse(json);
+    const { architecture, weights } = parsed;
+
+    const builder = new ModelBuilder(architecture.name, architecture.inputShape);
+    builder.addLayers(architecture.layers);
+    builder._architecture.outputShape = architecture.outputShape;
+
+    // Restore parameter values when present (backwards-compatible with toJSON output)
+    if (weights) {
+      const layers = builder._model.getModules();
+
+      for (let i = 0; i < layers.length && i < weights.length; i++) {
+        const layer = layers[i];
+
+        if (!layer.parameters || weights[i].length === 0) {
+          continue;
+        }
+
+        const params = layer.parameters();
+
+        for (let p = 0; p < params.length && p < weights[i].length; p++) {
+          const pData = params[p].data as Float32Array;
+          const saved = weights[i][p];
+
+          for (let k = 0; k < pData.length && k < saved.length; k++) {
+            pData[k] = saved[k];
+          }
+        }
+      }
+    }
 
     return builder;
   }

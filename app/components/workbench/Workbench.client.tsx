@@ -21,6 +21,7 @@ import { renderLogger } from '~/utils/logger';
 import { EditorPanel } from './EditorPanel';
 import { Preview } from './Preview';
 import useViewport from '~/lib/hooks';
+import { NnStatusPanel } from './NNStatusPanel';
 
 import { usePreviewStore } from '~/lib/stores/previews';
 import { chatStore } from '~/lib/stores/chat';
@@ -41,6 +42,9 @@ interface WorkspaceProps {
 }
 
 const viewTransition = { ease: cubicEasingFn };
+
+/** Show the NN/VM/ML status panel when this env var is set to a truthy value. */
+const ENABLE_NN_STATUS = Boolean(import.meta.env.VITE_ENABLE_NN_STATUS);
 
 const sliderOptions: SliderOptions<WorkbenchViewType> = {
   left: {
@@ -505,6 +509,11 @@ export const Workbench = memo(
                     <Preview setSelectedElement={setSelectedElement} />
                   </View>
                 </div>
+                {ENABLE_NN_STATUS && (
+                  <div className="border-t border-bolt-elements-borderColor px-3 py-2 shrink-0">
+                    <NnStatusPanel />
+                  </div>
+                )}
               </div>
             </div>
           </div>

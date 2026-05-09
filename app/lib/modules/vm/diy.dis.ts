@@ -60,7 +60,22 @@ export class InfernoVM {
     };
 
     for (const [exportName, address] of Object.entries(exportAddresses)) {
-      module.exports[exportName] = (..._args: unknown[]) => {
+      module.exports[exportName] = (...args: unknown[]) => {
+        /*
+         * Write numeric arguments into the process's flat memory so that
+         * bytecode can retrieve them via LOAD.  Argument i is written as a
+         * little-endian float32 at memory offset i * 4.
+         */
+        if (args.length > 0) {
+          const memView = new DataView(proc.memory.buffer);
+
+          for (let i = 0; i < args.length; i++) {
+            if (typeof args[i] === 'number') {
+              memView.setFloat32(i * 4, args[i] as number, true);
+            }
+          }
+        }
+
         proc.registers.set('__startPC', address);
 
         return this._runtime.execute(proc.id, bytecode);

@@ -75,6 +75,8 @@ export {
   createFeedforwardModel,
   createConvModel,
   type ModelArchitecture,
+  type OptimizerType,
+  type AdamOptions,
 } from './nn/model-builder';
 
 // Distributed Module Exports

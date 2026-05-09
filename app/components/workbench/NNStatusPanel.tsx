@@ -30,7 +30,13 @@ export function NnStatusPanel() {
           VM Processes: <span className="text-bolt-elements-textPrimary">{status.vm.processes}</span>
         </div>
         <div>
+          VM Modules: <span className="text-bolt-elements-textPrimary">{status.vm.loadedModules}</span>
+        </div>
+        <div>
           ML Module: <span className="text-bolt-elements-textPrimary">{status.ml.status}</span>
+        </div>
+        <div>
+          Loaded Models: <span className="text-bolt-elements-textPrimary">{status.ml.loadedModels}</span>
         </div>
         <div className="text-bolt-elements-textTertiary text-[10px]">
           Updated: {new Date(status.timestamp).toLocaleTimeString()}

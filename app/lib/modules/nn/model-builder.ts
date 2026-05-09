@@ -14,10 +14,13 @@ export type OptimizerType = 'sgd' | 'adam' | 'adamw';
 export interface AdamOptions {
   /** Exponential decay rate for the first moment (default 0.9). */
   beta1?: number;
+
   /** Exponential decay rate for the second moment (default 0.999). */
   beta2?: number;
+
   /** Numerical stability epsilon (default 1e-8). */
   epsilon?: number;
+
   /** Weight-decay coefficient for AdamW (default 0.01). */
   weightDecay?: number;
 }
@@ -221,6 +224,7 @@ export class ModelBuilder {
      * Allocated lazily on the first pass so we know each parameter's size.
      */
     type MomentPair = { m: Float32Array; v: Float32Array };
+
     const moments: MomentPair[] = [];
     let adamStep = 0;
 

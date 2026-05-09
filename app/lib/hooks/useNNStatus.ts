@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 
 export interface NNStatus {
   system: { name: string; version: string; components: Record<string, string> };
-  vm: { processes: number; processList: Array<{ id: string; state: string }> };
-  ml: { status: string };
+  vm: { loadedModules: number; processes: number; processList: Array<{ id: string; state: string }> };
+  ml: { status: string; loadedModels: number; modelNames: string[] };
   timestamp: string;
 }
 

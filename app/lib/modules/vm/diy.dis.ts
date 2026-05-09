@@ -141,10 +141,13 @@ export class InfernoVM {
       typeof (runtimeProcess as Record<string, unknown>).memoryUsage === 'function'
         ? (runtimeProcess as { memoryUsage: () => { heapUsed: number } }).memoryUsage()
         : { heapUsed: 0 };
+    const processes = this._runtime.getAllProcesses();
 
     return {
       loadedModules: this._modules.size,
       memoryUsage: memUsage,
+      processes: processes.length,
+      processList: processes.map((proc) => ({ id: proc.id, state: proc.state })),
       config: this._config,
     };
   }

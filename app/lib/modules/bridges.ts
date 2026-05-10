@@ -20,7 +20,7 @@ export class NNVMBridge {
   private _vm: InfernoVM;
 
   /** Size in bytes of the bytecode file header (magic, version, entry, data, code, checksum). */
-  private static readonly _HEADER_SIZE = 24;
+  private static readonly _headerSize = 24;
 
   constructor(vm: InfernoVM) {
     this._vm = vm;
@@ -43,7 +43,7 @@ export class NNVMBridge {
       const layer = layers[i];
       const name = `${modelName}_layer_${i}`;
 
-      // Export table: one entry 'forward' whose address is the code-section start.
+      /* Export table: one entry 'forward' whose address is the code-section start. */
       const exportTable = [{ name: 'forward', address: 0 }];
       const codeStart = this._computeCodeStart(exportTable);
       exportTable[0].address = codeStart;
@@ -61,8 +61,10 @@ export class NNVMBridge {
           code = this._encodeSigmoid(codeStart);
           break;
         default:
-          // For parametric layers (Linear, BatchNorm, etc.) the full forward
-          // pass is performed in TypeScript; the VM module acts as a pass-through.
+          /*
+           * For parametric layers (Linear, BatchNorm, etc.) the full forward
+           * pass is performed in TypeScript; the VM module acts as a pass-through.
+           */
           code = this._encodePassthrough();
       }
 
@@ -86,13 +88,15 @@ export class NNVMBridge {
    */
   private _computeCodeStart(exportTable: Array<{ name: string; address: number }>): number {
     const dataSize = 2 + exportTable.reduce((acc, e) => acc + 1 + e.name.length + 2, 0);
-    return NNVMBridge._HEADER_SIZE + dataSize;
+
+    return NNVMBridge._headerSize + dataSize;
   }
 
   /** Encode a 32-bit IEEE 754 float as four little-endian bytes. */
   private _floatLE(value: number): number[] {
     const buf = new ArrayBuffer(4);
     new DataView(buf).setFloat32(0, value, true);
+
     return Array.from(new Uint8Array(buf));
   }
 
@@ -113,17 +117,19 @@ export class NNVMBridge {
    *   HALT
    */
   private _encodeReLU(codeStart: number): number[] {
-    // Byte offsets within the code section:
-    //  0  PUSH_INT 0 (2 bytes)
-    //  2  LOAD       (1 byte)
-    //  3  DUP        (1 byte)
-    //  4  PUSH_INT 0 (2 bytes)
-    //  6  GT         (1 byte)
-    //  7  JZ <abs>   (3 bytes)
-    // 10  JMP <abs>  (3 bytes)
-    // 13  POP        (1 byte)  ← zero_case
-    // 14  PUSH_INT 0 (2 bytes)
-    // 16  HALT               ← end
+    /*
+     * Byte offsets within the code section:
+     *  0  PUSH_INT 0 (2 bytes)
+     *  2  LOAD       (1 byte)
+     *  3  DUP        (1 byte)
+     *  4  PUSH_INT 0 (2 bytes)
+     *  6  GT         (1 byte)
+     *  7  JZ <abs>   (3 bytes)
+     * 10  JMP <abs>  (3 bytes)
+     * 13  POP        (1 byte)  ← zero_case
+     * 14  PUSH_INT 0 (2 bytes)
+     * 16  HALT               ← end
+     */
     const zeroCase = codeStart + 13;
     const end = codeStart + 16;
     const zeroLo = zeroCase & 0xff;
@@ -132,15 +138,22 @@ export class NNVMBridge {
     const endHi = (end >> 8) & 0xff;
 
     return [
-      0x03, 0x00, // PUSH_INT 0  (memory address 0)
+      0x03,
+      0x00, // PUSH_INT 0  (memory address 0)
       0x40, // LOAD
       0x50, // DUP
-      0x03, 0x00, // PUSH_INT 0  (threshold)
+      0x03,
+      0x00, // PUSH_INT 0  (threshold)
       0x22, // GT
-      0x31, zeroLo, zeroHi, // JZ zero_case
-      0x30, endLo, endHi, // JMP end
+      0x31,
+      zeroLo,
+      zeroHi, // JZ zero_case
+      0x30,
+      endLo,
+      endHi, // JMP end
       0x02, // POP           (zero_case)
-      0x03, 0x00, // PUSH_INT 0
+      0x03,
+      0x00, // PUSH_INT 0
       0xff, // HALT          (end)
     ];
   }
@@ -168,23 +181,25 @@ export class NNVMBridge {
    *   HALT
    */
   private _encodeTanh(codeStart: number): number[] {
-    // Byte offsets within the code section:
-    //  0  PUSH_INT 0    (2 bytes)
-    //  2  LOAD          (1 byte)
-    //  3  DUP           (1 byte)
-    //  4  PUSH -1.0f    (5 bytes)
-    //  9  LT            (1 byte)
-    // 10  JZ not_below  (3 bytes)
-    // 13  POP           (1 byte)
-    // 14  PUSH -1.0f    (5 bytes)
-    // 19  JMP end       (3 bytes)
-    // 22  DUP           (1 byte)  ← not_below
-    // 23  PUSH 1.0f     (5 bytes)
-    // 28  GT            (1 byte)
-    // 29  JZ end        (3 bytes)
-    // 32  POP           (1 byte)
-    // 33  PUSH 1.0f     (5 bytes)
-    // 38  HALT                    ← end
+    /*
+     * Byte offsets within the code section:
+     *  0  PUSH_INT 0    (2 bytes)
+     *  2  LOAD          (1 byte)
+     *  3  DUP           (1 byte)
+     *  4  PUSH -1.0f    (5 bytes)
+     *  9  LT            (1 byte)
+     * 10  JZ not_below  (3 bytes)
+     * 13  POP           (1 byte)
+     * 14  PUSH -1.0f    (5 bytes)
+     * 19  JMP end       (3 bytes)
+     * 22  DUP           (1 byte)  ← not_below
+     * 23  PUSH 1.0f     (5 bytes)
+     * 28  GT            (1 byte)
+     * 29  JZ end        (3 bytes)
+     * 32  POP           (1 byte)
+     * 33  PUSH 1.0f     (5 bytes)
+     * 38  HALT                    ← end
+     */
     const notBelow = codeStart + 22;
     const end = codeStart + 38;
     const notBelowLo = notBelow & 0xff;
@@ -195,21 +210,32 @@ export class NNVMBridge {
     const pos1 = this._floatLE(1.0);
 
     return [
-      0x03, 0x00, // PUSH_INT 0
+      0x03,
+      0x00, // PUSH_INT 0
       0x40, // LOAD
       0x50, // DUP
-      0x01, ...neg1, // PUSH -1.0
+      0x01,
+      ...neg1, // PUSH -1.0
       0x21, // LT
-      0x31, notBelowLo, notBelowHi, // JZ not_below
+      0x31,
+      notBelowLo,
+      notBelowHi, // JZ not_below
       0x02, // POP
-      0x01, ...neg1, // PUSH -1.0
-      0x30, endLo, endHi, // JMP end
+      0x01,
+      ...neg1, // PUSH -1.0
+      0x30,
+      endLo,
+      endHi, // JMP end
       0x50, // DUP               (not_below)
-      0x01, ...pos1, // PUSH 1.0
+      0x01,
+      ...pos1, // PUSH 1.0
       0x22, // GT
-      0x31, endLo, endHi, // JZ end
+      0x31,
+      endLo,
+      endHi, // JZ end
       0x02, // POP
-      0x01, ...pos1, // PUSH 1.0
+      0x01,
+      ...pos1, // PUSH 1.0
       0xff, // HALT              (end)
     ];
   }
@@ -241,27 +267,29 @@ export class NNVMBridge {
    *   HALT
    */
   private _encodeSigmoid(codeStart: number): number[] {
-    // Byte offsets within the code section:
-    //  0  PUSH_INT 0      (2 bytes)
-    //  2  LOAD            (1 byte)
-    //  3  PUSH 0.25f      (5 bytes)
-    //  8  MUL             (1 byte)
-    //  9  PUSH 0.5f       (5 bytes)
-    // 14  ADD             (1 byte)
-    // 15  DUP             (1 byte)
-    // 16  PUSH_INT 0      (2 bytes)
-    // 18  GT              (1 byte)
-    // 19  JNZ check_upper (3 bytes)
-    // 22  POP             (1 byte)
-    // 23  PUSH_INT 0      (2 bytes)
-    // 25  JMP end         (3 bytes)
-    // 28  DUP             (1 byte)  ← check_upper
-    // 29  PUSH 1.0f       (5 bytes)
-    // 34  GT              (1 byte)
-    // 35  JZ  end         (3 bytes)
-    // 38  POP             (1 byte)
-    // 39  PUSH 1.0f       (5 bytes)
-    // 44  HALT                      ← end
+    /*
+     * Byte offsets within the code section:
+     *  0  PUSH_INT 0      (2 bytes)
+     *  2  LOAD            (1 byte)
+     *  3  PUSH 0.25f      (5 bytes)
+     *  8  MUL             (1 byte)
+     *  9  PUSH 0.5f       (5 bytes)
+     * 14  ADD             (1 byte)
+     * 15  DUP             (1 byte)
+     * 16  PUSH_INT 0      (2 bytes)
+     * 18  GT              (1 byte)
+     * 19  JNZ check_upper (3 bytes)
+     * 22  POP             (1 byte)
+     * 23  PUSH_INT 0      (2 bytes)
+     * 25  JMP end         (3 bytes)
+     * 28  DUP             (1 byte)  ← check_upper
+     * 29  PUSH 1.0f       (5 bytes)
+     * 34  GT              (1 byte)
+     * 35  JZ  end         (3 bytes)
+     * 38  POP             (1 byte)
+     * 39  PUSH 1.0f       (5 bytes)
+     * 44  HALT                      ← end
+     */
     const checkUpper = codeStart + 28;
     const end = codeStart + 44;
     const checkUpperLo = checkUpper & 0xff;
@@ -273,25 +301,38 @@ export class NNVMBridge {
     const one = this._floatLE(1.0);
 
     return [
-      0x03, 0x00, // PUSH_INT 0
+      0x03,
+      0x00, // PUSH_INT 0
       0x40, // LOAD
-      0x01, ...quarter, // PUSH 0.25
+      0x01,
+      ...quarter, // PUSH 0.25
       0x12, // MUL
-      0x01, ...half, // PUSH 0.5
+      0x01,
+      ...half, // PUSH 0.5
       0x10, // ADD
       0x50, // DUP
-      0x03, 0x00, // PUSH_INT 0
+      0x03,
+      0x00, // PUSH_INT 0
       0x22, // GT
-      0x32, checkUpperLo, checkUpperHi, // JNZ check_upper
+      0x32,
+      checkUpperLo,
+      checkUpperHi, // JNZ check_upper
       0x02, // POP
-      0x03, 0x00, // PUSH_INT 0
-      0x30, endLo, endHi, // JMP end
+      0x03,
+      0x00, // PUSH_INT 0
+      0x30,
+      endLo,
+      endHi, // JMP end
       0x50, // DUP               (check_upper)
-      0x01, ...one, // PUSH 1.0
+      0x01,
+      ...one, // PUSH 1.0
       0x22, // GT
-      0x31, endLo, endHi, // JZ end
+      0x31,
+      endLo,
+      endHi, // JZ end
       0x02, // POP
-      0x01, ...one, // PUSH 1.0
+      0x01,
+      ...one, // PUSH 1.0
       0xff, // HALT              (end)
     ];
   }
@@ -303,7 +344,8 @@ export class NNVMBridge {
    */
   private _encodePassthrough(): number[] {
     return [
-      0x03, 0x00, // PUSH_INT 0  (memory address)
+      0x03,
+      0x00, // PUSH_INT 0  (memory address)
       0x40, // LOAD
       0xff, // HALT
     ];

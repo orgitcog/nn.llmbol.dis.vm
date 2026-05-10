@@ -360,6 +360,23 @@ export class MLModule {
     return this._models.get(name);
   }
 
+  /**
+   * Return the names of all currently loaded models.
+   */
+  getModelNames(): string[] {
+    return Array.from(this._models.keys());
+  }
+
+  /**
+   * Return basic runtime information about loaded models.
+   */
+  getStats() {
+    return {
+      loadedModels: this._models.size,
+      modelNames: this.getModelNames(),
+    };
+  }
+
   /** Return true when `a` and `b` have identical shapes. */
   private _shapesMatch(a: number[], b: number[]): boolean {
     return a.length === b.length && a.every((v, i) => v === b[i]);

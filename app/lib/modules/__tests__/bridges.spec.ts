@@ -20,7 +20,9 @@ describe('NNVMBridge', () => {
 
   describe('compileModel', () => {
     it('should compile a Sequential model and return one module name per layer', async () => {
-      const model = nn().add(new Linear({ inputSize: 3, outputSize: 2, bias: true })).add(new ReLU());
+      const model = nn()
+        .add(new Linear({ inputSize: 3, outputSize: 2, bias: true }))
+        .add(new ReLU());
       const names = await bridge.compileModel('test', model);
 
       expect(names).toHaveLength(2);
@@ -199,6 +201,7 @@ describe('MLVMBridge', () => {
     const segment = bridge.writeTensor(proc, tensor, 16);
 
     expect(segment.address).toBe(16);
+
     // 4 bytes ndim + 1*4 bytes shape + 2*4 bytes data
     expect(segment.length).toBe(4 + 4 + 8);
     expect(segment.dtype).toBe('float32');
@@ -239,6 +242,7 @@ describe('ModelBuilder – optimisers', () => {
     const losses = builder.train(inputs, targets, mse, 0.01, 3, 'sgd');
 
     expect(losses).toHaveLength(3);
+
     // Loss should be finite numbers
     for (const l of losses) {
       expect(isFinite(l)).toBe(true);

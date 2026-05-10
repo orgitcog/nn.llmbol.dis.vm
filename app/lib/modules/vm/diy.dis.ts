@@ -6,6 +6,10 @@
  */
 
 import { VMRuntime } from '~/lib/modules/vm/vm-runtime';
+import {
+  createDistributedModeCoordinator,
+  type DistributedModeCoordinator,
+} from '~/lib/modules/distributed/distributed-mode';
 
 export interface DisModule {
   name: string;
@@ -27,6 +31,7 @@ export class InfernoVM {
   private _modules: Map<string, DisModule>;
   private _config: VMConfig;
   private _runtime: VMRuntime;
+  private _distributedCoordinator?: DistributedModeCoordinator;
 
   constructor(config: Partial<VMConfig> = {}) {
     this._modules = new Map();
@@ -37,6 +42,14 @@ export class InfernoVM {
       securityLevel: config.securityLevel ?? 'strict',
     };
     this._runtime = new VMRuntime();
+
+    if (this._config.enableDistributed) {
+      this._distributedCoordinator = createDistributedModeCoordinator({
+        nodeId: `vm-${Math.random().toString(36).slice(2)}`,
+        capabilities: ['inference', 'training', 'data_processing'],
+      });
+      this._distributedCoordinator.start();
+    }
   }
 
   /**
@@ -115,6 +128,30 @@ export class InfernoVM {
   }
 
   /**
+   * Execute a distributed task when distributed mode is enabled.
+   */
+  async executeDistributedTask(
+    type: 'inference' | 'training' | 'data_processing',
+    payload: unknown,
+    priority: number = 0,
+    preferRemote: boolean = true,
+  ): Promise<unknown> {
+    if (!this._distributedCoordinator) {
+      throw new Error('Distributed mode is disabled for this VM instance');
+    }
+
+    const task = {
+      id: `vm-task-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      type,
+      payload,
+      priority,
+      createdAt: Date.now(),
+    };
+
+    return this._distributedCoordinator.executeTask(task, { preferRemote });
+  }
+
+  /**
    * Return the names of all currently loaded modules.
    */
   getModules(): string[] {
@@ -149,6 +186,7 @@ export class InfernoVM {
       processes: processes.length,
       processList: processes.map((proc) => ({ id: proc.id, state: proc.state })),
       config: this._config,
+      distributed: this._distributedCoordinator ? this._distributedCoordinator.getStats() : null,
     };
   }
 

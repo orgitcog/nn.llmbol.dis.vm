@@ -80,6 +80,19 @@ describe('InfernoVM', () => {
       expect(stats).toHaveProperty('config');
       expect(stats.loadedModules).toBe(0);
     });
+
+    it('should expose distributed stats when distributed mode is enabled', async () => {
+      const vm = createVM({ enableDistributed: true });
+      const result = (await vm.executeDistributedTask('data_processing', { data: [1, 2, 3] }, 1, false)) as {
+        type: string;
+        result: { mean: number };
+      };
+      const stats = vm.getStats();
+
+      expect(result.type).toBe('data_processing');
+      expect(result.result.mean).toBe(2);
+      expect(stats.distributed).not.toBeNull();
+    });
   });
 });
 

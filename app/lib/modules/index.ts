@@ -102,6 +102,13 @@ export {
   type CommunicationConfig,
 } from './distributed/communication';
 
+export {
+  DistributedModeCoordinator,
+  createDistributedModeCoordinator,
+  type DistributedModeConfig,
+  type DistributedExecuteOptions,
+} from './distributed/distributed-mode';
+
 // Bridge Exports
 export { NNVMBridge, MLVMBridge, type MemorySegment } from './bridges';
 

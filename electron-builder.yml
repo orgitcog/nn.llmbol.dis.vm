@@ -55,8 +55,8 @@ npmRebuild: false
 
 publish:
   provider: github
-  owner: Derek-X-Wang
-  repo: bolt.local
+  owner: orgitcog
+  repo: nn.llmbol.dis.vm
   private: true
   releaseType: release
 
